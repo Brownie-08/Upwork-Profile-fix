@@ -1,0 +1,59 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Notifications</h2>
+    <div class="card mt-4">
+        <div class="card-header" style="background-color: var(--primary-color); color: #fff; display: flex; justify-content: space-between; align-items: center;">
+            <h5 class="mb-0">
+                <i class="fas fa-bell me-2"></i>All Notifications
+            </h5>
+            <button type="button" class="btn btn-light btn-sm" title="Clear All Notifications" onclick="clearAllNotifications()">
+                <i class="fas fa-trash"></i> Clear All
+            </button>
+        </div>
+        <div class="card-body" style="background-color: var(--background-color); padding: 1.5rem;">
+            {% if notifications %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for notification in notifications %}
+                        <div class="col">
+                            <div class="notification-item card h-100 shadow-sm {% if not notification.is_read %}border-primary{% endif %}">
+                                <div class="card-body">
+                                    <h4 class="card-title mb-2">
+                                        {% if notification.link %}
+                                            <a href="{{ notification.link }}">{{ notification.title }}</a>
+                                        {% else %}
+                                            {{ notification.title }}
+                                        {% endif %}
+                                    </h4>
+                                    <p class="meta-info mb-2">
+                                        <i class="fas fa-calendar-alt me-2"></i>
+                                        {{ notification.created_at|date:"M d, Y H:i" }}
+                                    </p>
+                                    <p class="description text-muted" style="max-height: 100px; overflow-y: auto;">
+                                        {{ notification.message|truncatewords:35 }}
+                                    </p>
+                                    <div class="action-buttons mt-3">
+                                        {% if not notification.is_read %}
+                                            <button type="button" class="btn btn-primary btn-sm mark-read-btn" data-notification-id="{{ notification.id }}">
+                                                <i class="fas fa-check me-1"></i>Mark as Read
+                                            </button>
+                                        {% endif %}
+                                        <a href="{% url 'notifications:delete_notification' notification.id %}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this notification?');">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-state text-muted text-center py-5">No notifications yet. Stay tuned for updates!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<script src="{% static 'js/notifications.js' %}"></script>
+{% endblock %}

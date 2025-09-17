@@ -1,0 +1,23 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Verify {{ label }} ({{ permit.permit_number }})</h1>
+{% if permit.permit_document %}
+<p><a href="{{ permit.permit_document.url }}" target="_blank">View Document</a></p>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="approve">
+    <button type="submit" class="btn btn-success">Approve</button>
+</form>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="reject">
+    <textarea name="rejection_reason" placeholder="Rejection reason"></textarea>
+    <button type="submit" class="btn btn-danger">Reject</button>
+</form>
+{% if permit.rejection_reason %}
+<p>Rejection Reason: {{ permit.rejection_reason }}</p>
+{% endif %}
+{% else %}
+<p>No document uploaded.</p>
+{% endif %}
+{% endblock %}

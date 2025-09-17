@@ -1,0 +1,371 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block head %}
+<style>
+    .modal { z-index: 1060 !important; }
+    .modal-backdrop { z-index: 1050 !important; }
+    .modal-backdrop ~ .modal-backdrop { display: none !important; }
+    .card { transition: transform 0.2s; }
+    .card:hover { transform: translateY(-5px); }
+    .error-message { display: none; margin-top: 0.5rem; font-size: 0.875rem; }
+    .preview-container { width: 200px; height: 150px; display: flex; justify-content: center; align-items: center; margin: 0 auto; overflow: hidden; }
+    .file-preview { max-height: 150px !important; max-width: 200px !important; width: auto !important; height: auto !important; object-fit: contain !important; display: block !important; }
+</style>
+{% endblock %}
+
+{% block title %}Add Permit{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Add Government Permit</h3>
+                </div>
+                <div class="card-body">
+                    <form id="addPermitForm" method="POST" enctype="multipart/form-data" action="{% url 'profiles:add_permit' %}">
+                        {% csrf_token %}
+                        <!-- Hidden file input for actual form submission -->
+                        <input type="file" id="permit_document" name="permit_document" class="d-none" accept="image/jpeg,image/png,application/pdf">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="permit_type" class="form-label">Permit Type</label>
+                                {{ form.permit_type }}
+                                <div id="permitTypeHelp" class="form-text">Select the type of government permit you want to add</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="permit_number" class="form-label">Permit Number</label>
+                                <input type="text" id="permit_number" name="permit_number" class="form-control" required aria-describedby="permitNumberHelp">
+                                <div id="permitNumberHelp" class="form-text">Enter the permit's unique identifier.</div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="issue_date" class="form-label">Issue Date</label>
+                                <input type="date" id="issue_date" name="issue_date" class="form-control" required aria-describedby="issueDateHelp">
+                                <div id="issueDateHelp" class="form-text">Select the date the permit was issued.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="expiry_date" class="form-label">Expiry Date</label>
+                                <input type="date" id="expiry_date" name="expiry_date" class="form-control" required aria-describedby="expiryDateHelp">
+                                <div id="expiryDateHelp" class="form-text">Select the date the permit expires.</div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <h5 class="mb-3">Permit Document</h5>
+                            <div class="document-status">
+                                <label class="form-label">Permit Document</label>
+                                <div id="permit_document_status" class="text-muted" aria-live="polite">No file selected</div>
+                                <button type="button" class="btn btn-sm btn-primary mt-2" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#permitDocumentModal" 
+                                        data-field="permit_document" 
+                                        data-label="Permit Document"
+                                        aria-label="Upload Permit Document">Upload</button>
+                            </div>
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                        <button type="submit" class="btn btn-primary">Add Permit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="permitDocumentModal" tabindex="-1" aria-labelledby="permitDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="permitDocumentModalLabel">Upload Permit Document</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="permitDocumentForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="document_file" class="form-label" id="documentUploadLabel">Select Document</label>
+                        <input type="file" class="form-control" id="document_file" name="document_file" accept="image/jpeg,image/png,application/pdf" required aria-describedby="documentUploadHelp">
+                        <div id="documentUploadHelp" class="form-text">Upload JPG, PNG, or PDF (max 5MB). Supported formats: .jpg, .jpeg, .png, .pdf</div>
+                        <div class="preview-container">
+                            <img id="file_preview" class="file-preview mt-2" style="display: none;" alt="Document preview">
+                        </div>
+                        <div class="preview-container">
+                            <iframe id="file_preview_pdf" class="file-preview mt-2" style="display: none;" title="PDF document preview"></iframe>
+                        </div>
+                    </div>
+                    <input type="hidden" id="document_field">
+                    <div class="error-message alert alert-danger"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="saveDocument" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showError(form, message) {
+        const errorDiv = form.querySelector('.error-message');
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            errorDiv.setAttribute('role', 'alert');
+        }
+    }
+
+    function clearError(form) {
+        const errorDiv = form.querySelector('.error-message');
+        if (errorDiv) {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+            errorDiv.removeAttribute('role');
+        }
+    }
+
+    // Module-scoped variables
+    let isValidFile = false;
+    let modalInstance = null;
+
+    function validateFile(file, maxSizeMB, allowedTypes) {
+        // Check file size
+        if (file.size > maxSizeMB * 1024 * 1024) {
+            return { valid: false, error: `File size exceeds ${maxSizeMB}MB limit.` };
+        }
+        
+        // Check file type
+        if (!allowedTypes.includes(file.type)) {
+            return { valid: false, error: 'Please select a valid JPG, PNG, or PDF file.' };
+        }
+        
+        return { valid: true };
+    }
+
+    function handleFileInput(fileInput, previewImg, previewPdf, maxSizeMB, allowedTypes, errorForm) {
+        // Don't clone - directly set the onchange handler on the existing input
+        fileInput.onchange = function() {
+            const file = this.files[0];
+            clearError(errorForm);
+            previewImg.style.display = 'none';
+            previewImg.src = '';
+            previewPdf.style.display = 'none';
+            previewPdf.src = '';
+            isValidFile = false;
+
+            if (!file) {
+                console.log('No file selected for preview.');
+                return;
+            }
+
+            console.log(`Selected file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+            
+            const validation = validateFile(file, maxSizeMB, allowedTypes);
+            if (!validation.valid) {
+                showError(errorForm, validation.error);
+                this.value = '';
+                return;
+            }
+            
+            isValidFile = true;
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    previewPdf.style.display = 'none';
+                    console.log('Image preview loaded.');
+                };
+                reader.onerror = () => console.error('Error reading image file.');
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewPdf.src = e.target.result;
+                    previewPdf.style.display = 'block';
+                    previewImg.style.display = 'none';
+                    console.log('PDF preview loaded in iframe.');
+                };
+                reader.onerror = () => console.error('Error reading PDF file.');
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        return fileInput; // Return the input for further reference
+    }
+
+    const modal = document.getElementById('permitDocumentModal');
+    
+    // Initialize modal instance
+    modalInstance = bootstrap.Modal.getOrCreateInstance(modal);
+    
+    // Reset modal on hidden
+    modal.addEventListener('hidden.bs.modal', function() {
+        const form = modal.querySelector('#permitDocumentForm');
+        const filePreview = modal.querySelector('#file_preview');
+        const filePreviewPdf = modal.querySelector('#file_preview_pdf');
+        
+        clearError(form);
+        filePreview.style.display = 'none';
+        filePreview.src = '';
+        filePreviewPdf.style.display = 'none';
+        filePreviewPdf.src = '';
+        isValidFile = false;
+    });
+    
+    const saveButton = modal.querySelector('#saveDocument');
+    saveButton.addEventListener('click', function() {
+        console.log('Save button clicked for permit document.');
+        const fileInput = modal.querySelector('#document_file');
+        const file = fileInput.files[0];
+        const form = modal.querySelector('#permitDocumentForm');
+        const field = modal.querySelector('#document_field').value;
+
+        if (file && isValidFile) {
+            console.log(`Saving file: ${file.name} for field: ${field}`);
+            
+            // Copy the selected file to the hidden main form input
+            const mainInput = document.querySelector('#addPermitForm #permit_document');
+            if (mainInput) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                mainInput.files = dt.files;
+                console.log('File copied to main form input');
+            }
+            
+            document.getElementById(`${field}_status`).textContent = file.name;
+            modalInstance.hide();
+            console.log('Modal closed successfully.');
+        } else {
+            console.log('No valid file selected or validation failed.');
+            if (!file) {
+                showError(form, 'Please select a file.');
+            }
+        }
+    });
+
+    document.querySelectorAll('[data-bs-target="#permitDocumentModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const field = this.dataset.field;
+            const label = this.dataset.label;
+            if (!field) {
+                console.error('Field is undefined');
+                return;
+            }
+            const title = modal.querySelector('#permitDocumentModalLabel');
+            const form = modal.querySelector('#permitDocumentForm');
+            const fileInput = modal.querySelector('#document_file');
+            const filePreview = modal.querySelector('#file_preview');
+            const filePreviewPdf = modal.querySelector('#file_preview_pdf');
+            const fieldInput = modal.querySelector('#document_field');
+
+            title.textContent = `Upload ${label}`;
+            fieldInput.value = field;
+            fileInput.value = '';
+            filePreview.style.display = 'none';
+            filePreview.src = '';
+            filePreviewPdf.style.display = 'none';
+            filePreviewPdf.src = '';
+            clearError(form);
+
+            handleFileInput(
+                fileInput,
+                filePreview,
+                filePreviewPdf,
+                5,
+                ['image/jpeg', 'image/png', 'application/pdf'],
+                form,
+                'JPG, PNG, or PDF file'
+            );
+
+            modal.addEventListener('shown.bs.modal', () => fileInput.focus(), { once: true });
+        });
+    });
+
+    document.getElementById('addPermitForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearError(this);
+        const formData = new FormData(this);
+        
+        
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+
+        fetch("{% url 'profiles:add_permit' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            // Always try to parse JSON regardless of response status
+            return response.json().then(data => ({
+                ok: response.ok,
+                status: response.status,
+                data: data
+            }));
+        })
+        .then(({ok, status, data}) => {
+            if (ok && data.success) {
+                console.log('Permit added successfully:', data.message);
+                window.location.href = data.redirect_url;
+            } else {
+                // Handle error response - data.errors should be an array of {field, message} objects
+                let errorMessage = 'Submission failed.';
+                if (data.errors && Array.isArray(data.errors)) {
+                    errorMessage = data.errors.map(error => error.message).join(', ');
+                } else if (data.errors) {
+                    // Fallback for other error formats
+                    try {
+                        const parsed = typeof data.errors === 'string' ? JSON.parse(data.errors) : data.errors;
+                        errorMessage = Object.values(parsed).flat().join(', ');
+                    } catch (parseError) {
+                        errorMessage = String(data.errors);
+                    }
+                } else if (!ok) {
+                    errorMessage = `Server error (${status}). Please try again.`;
+                }
+                throw new Error(errorMessage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Handle network errors or JSON parsing errors
+            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                showError(this, 'Network error. Please check your connection and try again.');
+            } else {
+                showError(this, error.message || 'An error occurred during submission.');
+            }
+        })
+        .finally(() => {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Add Permit';
+        });
+    });
+});
+</script>
+{% endblock %}

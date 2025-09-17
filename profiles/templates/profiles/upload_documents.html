@@ -1,0 +1,41 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Upload Verification Documents</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Government ID</label>
+                            <input type="file" class="form-control" name="id_document" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <small class="text-muted">Upload a clear, valid government-issued ID</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Business License</label>
+                            <input type="file" class="form-control" name="business_license" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <small class="text-muted">Upload your current business license</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">Insurance Document</label>
+                            <input type="file" class="form-control" name="insurance_document" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <small class="text-muted">Upload proof of insurance</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Upload Documents</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

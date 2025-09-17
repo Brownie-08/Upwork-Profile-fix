@@ -1,0 +1,334 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Job Details Column -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">{{ job.get_service_type_display }} Job Details</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>Route Overview</h5>
+                            <div id="route-map" style="height: 400px; width: 100%;"></div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <p><strong>Pickup Location:</strong> {{ job.pickup_location }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Dropoff Location:</strong> {{ job.dropoff_location }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h5>Description</h5>
+                            <p>{{ job.description|default:"No description provided" }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Budget: E {{ job.budget|floatformat:2 }}</h5>
+                                <span class="badge bg-{{ job.status|lower }}">{{ job.get_status_display }}</span>
+                            </div>
+                            
+                            <div class="mt-3">
+                                {% if job.distance_km %}
+                                    <p>
+                                        <i class="fas fa-route"></i> 
+                                        Distance: {{ job.distance_km|floatformat:1 }} km
+                                    </p>
+                                {% endif %}
+                                {% if job.estimated_time %}
+                                    <p>
+                                        <i class="fas fa-clock"></i> 
+                                        Estimated travel time: {{ job.estimated_time|floatformat:0 }} minutes
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Existing Bids -->
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Bids ({{ bids.count }})</h4>
+                </div>
+                <div class="card-body">
+                    {% for bid in bids %}
+                    <div class="bid-item mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">{{ bid.provider.profile.first_name|default:bid.provider.username }}</h5>
+                                <p class="mb-2">{{ bid.proposal|default:"No proposal provided" }}</p>
+                                <p class="mb-0">
+                                    <strong>Bid Amount:</strong> E {{ bid.amount|floatformat:2 }}
+                                </p>
+                                {% if bid.estimated_completion_time %}
+                                <p class="mb-0">
+                                    <strong>Estimated Completion:</strong> {{ bid.estimated_completion_time }} minutes
+                                </p>
+                                {% endif %}
+                                {% if bid.vehicle_type != 'ANY' %}
+                                <p class="mb-0">
+                                    <strong>Vehicle Type:</strong> {{ bid.vehicle_type }}
+                                </p>
+                                {% endif %}
+                                {% if bid.job_sample %}
+                                <p class="mb-0">
+                                    <strong>Sample:</strong> <a href="{{ bid.job_sample.url }}" target="_blank">View Sample</a>
+                                </p>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-{{ bid.status|lower }}">
+                                {{ bid.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        {% if bid.provider.profile.latitude and bid.provider.profile.longitude %}
+                        <div class="provider-location mt-3">
+                            <h6>Provider Location</h6>
+                            <div id="provider-map-{{ bid.id }}" style="height: 200px;"></div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if user == job.client and job.status == 'OPEN' %}
+                        <div class="mt-3">
+                            <form action="{% url 'transport:accept_bid' bid.id %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm" 
+                                        onclick="return confirm('Are you sure you want to accept this bid?');">
+                                    Accept Bid
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-center">No bids yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Posted by:</strong> {{ job.client.get_full_name|default:job.client.username }}</p>
+                    <p><strong>Posted:</strong> {{ job.created_at|timesince }} ago</p>
+                </div>
+            </div>
+            <!-- Bid Submission Button -->
+            {% if user.is_authenticated and user != job.client %}
+            <div class="mb-4">
+                <button class="btn btn-primary bid-button" id="submitBidButton">
+                    Submit a Bid
+                </button>
+                <div id="bidNotification" class="alert alert-warning mt-2" style="display: none;"></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bid Submission Modal -->
+    {% if user.is_authenticated and user != job.client and can_provide_service and job.status == 'OPEN' %}
+    <div class="modal fade" id="bidModal" tabindex="-1" aria-labelledby="bidModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="bidModalLabel">Submit a Bid</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" id="bidForm" action="{% url 'transport:submit_bid' job.id %}">
+                        {% csrf_token %}
+                        {{ bid_form|crispy }}
+                        <div id="bidError" class="alert alert-danger" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="bidForm" class="btn btn-primary">Submit Bid</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=geometry"></script>
+<script>
+function initMaps() {
+    // Initialize route map
+    const routeMap = new google.maps.Map(document.getElementById('route-map'), {
+        zoom: 12,
+        center: { lat: {{ job.pickup_latitude }}, lng: {{ job.pickup_longitude }} }
+    });
+
+    // Define pickup and dropoff coordinates
+    const pickupPos = { lat: {{ job.pickup_latitude }}, lng: {{ job.pickup_longitude }} };
+    const dropoffPos = { lat: {{ job.dropoff_latitude }}, lng: {{ job.dropoff_longitude }} };
+
+    // Add markers for pickup and dropoff
+    new google.maps.Marker({
+        position: pickupPos,
+        map: routeMap,
+        title: 'Pickup Location',
+        label: 'P',
+        icon: {
+            url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        }
+    });
+
+    new google.maps.Marker({
+        position: dropoffPos,
+        map: routeMap,
+        title: 'Dropoff Location',
+        label: 'D',
+        icon: {
+            url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        }
+    });
+
+    // Render stored polyline
+    {% if job.route_polyline %}
+    const decodedPath = google.maps.geometry.encoding.decodePath('{{ job.route_polyline|escapejs }}');
+    const polyline = new google.maps.Polyline({
+        path: decodedPath,
+        geodesic: true,
+        strokeColor: '#FF0000',
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+    });
+    polyline.setMap(routeMap);
+
+    // Fit map to show polyline and markers
+    const bounds = new google.maps.LatLngBounds();
+    decodedPath.forEach(point => bounds.extend(point));
+    bounds.extend(pickupPos);
+    bounds.extend(dropoffPos);
+    routeMap.fitBounds(bounds);
+    {% else %}
+    // Fallback: Fit map to markers only
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(pickupPos);
+    bounds.extend(dropoffPos);
+    routeMap.fitBounds(bounds);
+    console.warn('No route polyline available');
+    {% endif %}
+
+    // Initialize provider location maps
+    {% for bid in bids %}
+    {% if bid.provider.profile.latitude and bid.provider.profile.longitude %}
+    const providerMap{{ bid.id }} = new google.maps.Map(
+        document.getElementById('provider-map-{{ bid.id }}'),
+        {
+            zoom: 15,
+            center: { 
+                lat: {{ bid.provider.profile.latitude }}, 
+                lng: {{ bid.provider.profile.longitude }} 
+            }
+        }
+    );
+    new google.maps.Marker({
+        position: { 
+            lat: {{ bid.provider.profile.latitude }}, 
+            lng: {{ bid.provider.profile.longitude }} 
+        },
+        map: providerMap{{ bid.id }},
+        title: 'Provider Location'
+    });
+    {% endif %}
+    {% endfor %}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initMaps();
+    
+    // Handle bid button click
+    const bidButton = document.getElementById('submitBidButton');
+    const bidNotification = document.getElementById('bidNotification');
+    if (bidButton && bidNotification) {
+        bidButton.addEventListener('click', function() {
+            const isEligible = {{ can_provide_service|yesno:"true,false" }} && '{{ job.status }}' === 'OPEN';
+            if (isEligible) {
+                bidNotification.style.display = 'none';
+                bidNotification.textContent = '';
+                // Trigger modal opening
+                const modal = new bootstrap.Modal(document.getElementById('bidModal'));
+                modal.show();
+                console.log('Opening bid modal for eligible user');
+            } else {
+                bidNotification.textContent = '{{ job.status }}' === 'OPEN' ?
+                    'You are not eligible to bid on this job. Only verified providers can bid.' :
+                    'Bidding is closed for this job.';
+                bidNotification.style.display = 'block';
+                console.log('Showing notification for non-eligible user');
+            }
+        });
+    }
+
+    // Reset bid form and handle submission
+    const bidModal = document.getElementById('bidModal');
+    if (bidModal) {
+        bidModal.addEventListener('hidden.bs.modal', function() {
+            const bidForm = document.getElementById('bidForm');
+            if (bidForm) {
+                bidForm.reset();
+                const errorDiv = bidForm.querySelector('#bidError');
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                }
+            }
+            console.log('Bid modal closed');
+        });
+
+        // AJAX form submission
+        const bidForm = document.getElementById('bidForm');
+        if (bidForm) {
+            bidForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(bidForm);
+                fetch(bidForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Bid submitted successfully');
+                        window.location.reload();
+                    } else {
+                        const errorDiv = bidForm.querySelector('#bidError');
+                        errorDiv.textContent = data.error || 'Failed to submit bid. Please try again.';
+                        errorDiv.style.display = 'block';
+                        console.error('Bid submission error:', data.error);
+                    }
+                })
+                .catch(error => {
+                    const errorDiv = bidForm.querySelector('#bidError');
+                    errorDiv.textContent = 'An error occurred. Please try again.';
+                    errorDiv.style.display = 'block';
+                    console.error('Bid submission error:', error);
+                });
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

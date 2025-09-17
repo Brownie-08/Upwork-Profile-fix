@@ -1,0 +1,19 @@
+# Virtual environment
+.env
+.env.local
+.env.production
+venv/
+lusito_env/
+staticfiles/
+media/
+debug.log
+db.sqlite3
+
+# Admin credentials (never commit these)
+admin_credentials.txt
+credentials.txt
+*.credentials
+
+# Security keys
+*.key
+*.pem

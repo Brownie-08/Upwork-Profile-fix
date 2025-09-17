@@ -1,0 +1,190 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Project Header -->
+    <div class="job_container">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="card-title mb-0">{{ project.title }}</h2>
+                    <span class="badge bg-light text-dark">
+                        {{ project.get_service_type_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="description-section mb-4">
+                            <h5>Project Description</h5>
+                            <p class="card-text">{{ project.description }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="project-meta">
+                            <div class="status-badge mb-3">
+                                <span class="badge {% if project.status == 'OPEN' %}bg-success{% elif project.status == 'IN_PROGRESS' %}bg-warning{% else %}bg-info{% endif %} p-2">
+                                    {{ project.get_status_display }}
+                                </span>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item">
+                                    <i class="fas fa-coins me-2"></i>
+                                    <strong>Budget:</strong> E {{ project.budget }}
+                                    <small class="text-muted d-block">{{ project.get_payment_method_display }}</small>
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    <strong>Deadline:</strong> {{ project.deadline }}
+                                </li>
+                                <li class="list-group-item">
+                                    <i class="fas fa-user me-2"></i>
+                                    <strong>Client:</strong>
+                                    <a href="{% url 'public-profile' project.client.username %}" class="text-decoration-none">
+                                        {{ project.client.profile.first_name }} {{ project.client.profile.last_name }}
+                                    </a>
+                                </li>
+                                {% if project.freelancer %}
+                                <li class="list-group-item">
+                                    <i class="fas fa-user-tie me-2"></i>
+                                    <strong>Freelancer:</strong>
+                                    <a href="{% url 'public-profile' project.freelancer.username %}" class="text-decoration-none">
+                                        {{ project.freelancer.profile.first_name }} {{ project.freelancer.profile.last_name }}
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li class="list-group-item">
+                                    <i class="fas fa-clock me-2"></i>
+                                    <strong>Posted:</strong> {{ project.created_at|date:"M d, Y" }}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Files Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-file-alt me-2"></i>Project Files
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if project.files.all %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for file in project.files.all %}
+                            <tr>
+                                <td>{{ file.file_name }}</td>
+                                <td><span class="badge bg-info">{{ file.get_file_type }}</span></td>
+                                <td>{{ file.get_file_size }}</td>
+                                <td>
+                                    <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" download="{{ file.file_name }}">
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No files have been uploaded for this project yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Proposal Section -->
+    {% if user.is_authenticated and user != project.client and project.status == 'OPEN' %}
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Submit a Proposal</h5>
+        </div>
+        <div class="card-body">
+            {% if user_proposal %}
+                <p class="alert alert-info">You have already submitted a proposal for this project.</p>
+            {% else %}
+                <form method="post" action="{% url 'submit-proposal' project.id %}">
+                    {% csrf_token %}
+                    {{ proposal_form|crispy }}
+                    <button type="submit" class="btn btn-primary">Submit Proposal</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    
+
+    {% endif %}
+
+
+    <!-- Proposals List (Client View) -->
+    {% if user.is_authenticated and user == project.client %}
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Proposals Received</h5>
+        </div>
+        <div class="card-body">
+            {% if proposals %}
+                {% for proposal in proposals %}
+                <div class="proposal-card mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">
+                                        <a href="{% url 'public-profile' proposal.freelancer.username %}" class="text-decoration-none">
+                                            {{ proposal.freelancer.profile.first_name }} {{ proposal.freelancer.profile.middle_name }} {{ proposal.freelancer.profile.last_name }}
+                                        </a>
+                                    </h5>
+                                    <p class="card-text">{{ proposal.proposal_text }}</p>
+                                </div>
+                                <div class="text-end">
+                                    <div class="bid-amount mb-2">
+                                        <span class="badge bg-secondary">Bid: E {{ proposal.bid_amount }}</span>
+                                    </div>
+                                    {% if project.status == 'OPEN' %}
+                                    <form action="{% url 'accept-proposal' project.pk proposal.pk %}" method="POST">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="fas fa-check me-1"></i>Accept
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted mb-0">No proposals have been submitted yet.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Chat Button -->
+    {% if user == project.client or user == project.freelancer %}
+    <div class="text-center mb-4">
+        <a href="{% url 'chatroom_by_project'  project.id  %}" class="btn btn-primary btn-lg">
+            <i class="fas fa-comments me-2"></i>Open Project Chat
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,339 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% load profile_tags %}
+{% load static %}
+
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+    .card { transition: transform 0.3s ease; background: linear-gradient(145deg, #ffffff, #f1f5f9); border-radius: 12px; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); }
+    .card-header { background: linear-gradient(to right, #3b82f6, #1e40af); border-radius: 12px 12px 0 0; }
+    .btn-primary { transition: all 0.3s ease; border-radius: 8px; }
+    .btn-primary:hover { transform: scale(1.05); background-color: #1e40af; }
+    .error-message { display: none; color: #dc3545; font-size: 0.875rem; }
+    .field-error { color: #dc3545; font-size: 0.875rem; display: none; }
+    .preview-container { width: 200px; height: 150px; display: flex; justify-content: center; align-items: center; margin: 0 auto; overflow: hidden; }
+    .file-preview { max-height: 150px; max-width: 200px; width: auto; height: auto; object-fit: contain; display: block; }
+    .autocomplete-suggestions { position: absolute; background: white; border: 1px solid #ddd; z-index: 1000; width: 100%; max-height: 200px; overflow-y: auto; }
+    .autocomplete-suggestion { padding: 8px; cursor: pointer; }
+    .autocomplete-suggestion:hover { background: #f1f5f9; }
+</style>
+{% endblock %}
+
+{% block title %}Edit Vehicle{% endblock %}
+
+{% block content %}
+<div class="container py-8 px-4 sm:px-6 lg:px-8">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white py-4">
+                    <h3 class="mb-0 text-xl font-semibold"><i class="fas fa-car me-2"></i>Edit Vehicle: {{ vehicle }}</h3>
+                </div>
+                <div class="card-body p-6">
+                    <form id="editVehicleForm" method="POST" enctype="multipart/form-data" action="{% url 'profiles:edit_vehicle' vehicle.id %}">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" id="is_owner_operator" name="is_owner_operator" class="form-check-input" {% if is_owner_operator %}checked{% endif %}>
+                                <label for="is_owner_operator" class="form-check-label">I will operate this vehicle</label>
+                            </div>
+                        </div>
+                        <div id="operator_search_container" class="mb-4" style="display: {% if is_owner_operator %}none{% else %}block{% endif %}">
+                            <label for="operator_username" class="form-label font-medium text-gray-700">Search Operator (First or Last Name)</label>
+                            <input type="text" id="operator_search" class="form-control" placeholder="Enter first or last name" value="{% if not is_owner_operator and vehicle.operators.count > 0 %}{{ vehicle.operators.first.username }}{% endif %}">
+                            <input type="hidden" id="operator_username" name="operator_username" value="{% if not is_owner_operator and vehicle.operators.count > 0 %}{{ vehicle.operators.first.username }}{% endif %}">
+                            <div id="operator_suggestions" class="autocomplete-suggestions"></div>
+                            <div id="operator_username_error" class="field-error"></div>
+                        </div>
+                        {% for field, label in vehicle_document_fields %}
+                            <div class="mb-4">
+                                <label for="id_{{ field }}" class="form-label">{{ label }}</label>
+                                {{ doc_form|crispy }}
+                                {% if document|get_field:field %}
+                                    <div class="preview-container">
+                                        {% if document|get_field:field|lower|slice:-4 == '.pdf' %}
+                                            <iframe src="{{ document|get_field:field }}" class="file-preview mt-2" title="{{ label }} PDF preview"></iframe>
+                                        {% else %}
+                                            <img src="{{ document|get_field:field }}" class="file-preview mt-2" alt="{{ label }} preview">
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <div class="preview-container">
+                                        <img id="{{ field }}_preview" class="file-preview mt-2" style="display: none;" alt="{{ label }} preview">
+                                        <iframe id="{{ field }}_preview_pdf" class="file-preview mt-2" style="display: none;" title="{{ label }} PDF preview"></iframe>
+                                    </div>
+                                {% endif %}
+                                <div id="{{ field }}_error" class="field-error"></div>
+                            </div>
+                        {% endfor %}
+                        <div class="error-message alert alert-danger"></div>
+                        <button type="submit" class="btn btn-primary px-6 py-2 hover:bg-blue-700">Update Vehicle</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showError(form, message, fieldId = null) {
+        if (fieldId) {
+            const errorDiv = document.getElementById(`${fieldId}_error`);
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        } else {
+            const errorDiv = form.querySelector('.error-message');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                errorDiv.setAttribute('role', 'alert');
+            }
+        }
+    }
+
+    function clearError(form, fieldId = null) {
+        if (fieldId) {
+            const errorDiv = document.getElementById(`${fieldId}_error`);
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.style.display = 'none';
+            }
+        } else {
+            const errorDiv = form.querySelector('.error-message');
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.style.display = 'none';
+                errorDiv.removeAttribute('role');
+            }
+        }
+    }
+
+    function handleFileInput(fileInput, previewImg, previewPdf, maxSizeMB, allowedTypes, errorForm, fileTypeMessage) {
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            clearError(errorForm, fileInput.id);
+            previewImg.style.display = 'none';
+            previewImg.src = '';
+            previewPdf.style.display = 'none';
+            previewPdf.src = '';
+
+            if (!file) return;
+
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                showError(errorForm, `File size exceeds ${maxSizeMB}MB limit.`, fileInput.id);
+                this.value = '';
+                return;
+            }
+
+            if (!allowedTypes.includes(file.type)) {
+                showError(errorForm, `Please select a valid ${fileTypeMessage}.`, fileInput.id);
+                this.value = '';
+                return;
+            }
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    previewPdf.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewPdf.src = e.target.result;
+                    previewPdf.style.display = 'block';
+                    previewImg.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    const isOwnerOperator = document.getElementById('is_owner_operator');
+    const operatorSearchContainer = document.getElementById('operator_search_container');
+    const operatorSearch = document.getElementById('operator_search');
+    const operatorUsername = document.getElementById('operator_username');
+    const operatorSuggestions = document.getElementById('operator_suggestions');
+    const driversLicenseField = document.getElementById('id_drivers_license')?.closest('.mb-4');
+
+    function toggleFields() {
+        if (isOwnerOperator.checked) {
+            operatorSearchContainer.style.display = 'none';
+            operatorSearch.value = '';
+            operatorUsername.value = '';
+            if (driversLicenseField) {
+                driversLicenseField.style.display = 'block';
+            }
+        } else {
+            operatorSearchContainer.style.display = 'block';
+            if (driversLicenseField) {
+                driversLicenseField.style.display = 'none';
+            }
+        }
+    }
+
+    if (isOwnerOperator) {
+        isOwnerOperator.addEventListener('change', toggleFields);
+        toggleFields(); // Initial toggle
+    }
+
+    // Handle file inputs for document fields
+    {% for field, label in vehicle_document_fields %}
+        const {{ field }}Input = document.getElementById('id_{{ field }}');
+        const {{ field }}Preview = document.getElementById('{{ field }}_preview');
+        const {{ field }}PreviewPdf = document.getElementById('{{ field }}_preview_pdf');
+        if ({{ field }}Input) {
+            handleFileInput(
+                {{ field }}Input,
+                {{ field }}Preview,
+                {{ field }}PreviewPdf,
+                5, // Max file size in MB
+                ['image/jpeg', 'image/png', 'application/pdf'],
+                document.getElementById('editVehicleForm'),
+                '{{ field }} (JPG, PNG, or PDF)'
+            );
+        }
+    {% endfor %}
+
+    // Operator search autocomplete
+    if (operatorSearch) {
+        operatorSearch.addEventListener('input', debounce(function() {
+            const query = operatorSearch.value.trim();
+            if (query.length < 2) {
+                operatorSuggestions.innerHTML = '';
+                return;
+            }
+            fetch(`/profiles/search_users/?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch users');
+                return response.json();
+            })
+            .then(data => {
+                operatorSuggestions.innerHTML = '';
+                if (data.users && data.users.length > 0) {
+                    data.users.forEach(user => {
+                        const div = document.createElement('div');
+                        div.className = 'autocomplete-suggestion';
+                        div.textContent = `${user.first_name} ${user.last_name} (${user.username})`;
+                        div.dataset.username = user.username;
+                        div.addEventListener('click', () => {
+                            operatorSearch.value = `${user.first_name} ${user.last_name}`;
+                            operatorUsername.value = user.username;
+                            operatorSuggestions.innerHTML = '';
+                            clearError(document.getElementById('editVehicleForm'), 'operator_username');
+                        });
+                        operatorSuggestions.appendChild(div);
+                    });
+                } else {
+                    operatorSuggestions.innerHTML = '<div class="autocomplete-suggestion">No users found</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching users:', error);
+                operatorSuggestions.innerHTML = '<div class="autocomplete-suggestion">Error searching users</div>';
+            });
+        }, 300));
+    }
+
+    // Debounce function to limit API calls
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Form submission
+    const form = document.getElementById('editVehicleForm');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearError(form);
+        const formData = new FormData(form);
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (response.status === 401) throw new Error('User not authenticated. Please log in.');
+            if (!response.ok) return response.json().then(data => { throw data; });
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const messagesDiv = document.createElement('div');
+                messagesDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                    Vehicle updated successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>`;
+                document.querySelector('.container').prepend(messagesDiv);
+                window.location.href = '{% url 'profiles:profile' %}';
+            } else {
+                if (data.errors) {
+                    Object.entries(data.errors).forEach(([field, errors]) => {
+                        const fieldId = field === 'operator_username' ? 'operator_username' : `id_${field}`;
+                        showError(form, errors.join(', '), fieldId);
+                    });
+                } else {
+                    showError(form, 'Failed to update vehicle.');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting form:', error);
+            showError(form, error.message || 'An error occurred. Please try again.');
+        })
+        .finally(() => {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Update Vehicle';
+        });
+    });
+});
+</script>
+{% endblock %}

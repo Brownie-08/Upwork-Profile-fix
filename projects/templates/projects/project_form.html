@@ -1,0 +1,125 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Post A Job{% endblock %}
+
+{% block content %}
+<div class="container job_container">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title text-center">Create New Job</h2>
+            
+            <!-- Wallet Balance Display -->
+            <div class="alert alert-info mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Available Balance:</span>
+                    <span class="h5 mb-0">E {{ wallet_balance }}</span>
+                </div>
+            </div>
+
+            <!-- Messages Display -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Service Type Field -->
+                <div class="mb-4">
+                    {{ form.service_type|as_crispy_field }}
+                    {% if form.service_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.service_type.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Budget Field -->
+                <div class="mb-4">
+                    {{ form.budget|as_crispy_field }}
+                    {% if form.budget.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.budget.errors }}
+                        </div>
+                    {% endif %}
+                    <small class="text-muted">
+                        This amount will be deducted from your wallet upon project creation
+                    </small>
+                </div>
+
+                <!-- Other Fields -->
+                {{ form.title|as_crispy_field }}
+                {{ form.description|as_crispy_field }}
+                {{ form.deadline|as_crispy_field }}
+                
+                <!-- File Upload -->
+                <div class="mb-4">
+                    <label for="{{ form.files.id_for_label }}" class="form-label">Project Files</label>
+                    {{ form.files|as_crispy_field }}
+                    <small class="text-muted">
+                        Allowed file types: pdf, doc, docx, txt, png, jpg, jpeg
+                    </small>
+                </div>
+
+                <!-- File Preview -->
+                <div id="file-preview" class="mb-3">
+                    <div class="selected-files"></div>
+                </div>
+
+                <!-- General Form Errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Submit Button -->
+                <div class="text-center mb-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        Create Job
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- File Preview JavaScript -->
+<script>
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const preview = document.querySelector('.selected-files');
+    preview.innerHTML = '';
+    
+    if (this.files.length > 0) {
+        const fileList = document.createElement('div');
+        fileList.classList.add('list-group', 'mt-2');
+        
+        Array.from(this.files).forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+            
+            const fileName = document.createElement('span');
+            fileName.textContent = file.name;
+            
+            const fileSize = document.createElement('span');
+            fileSize.classList.add('badge', 'bg-primary', 'rounded-pill');
+            fileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+            
+            fileItem.appendChild(fileName);
+            fileItem.appendChild(fileSize);
+            fileList.appendChild(fileItem);
+        });
+        
+        preview.appendChild(fileList);
+    }
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,303 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Reset Password - LusitoHub{% endblock %}
+
+{% block extra_head %}
+<style>
+    .reset-container {
+        max-width: 450px;
+        margin: 100px auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        padding: 40px;
+        text-align: center;
+    }
+    
+    .reset-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+    }
+    
+    .form-control {
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 15px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+    
+    .form-control:focus {
+        border-color: #f093fb;
+        box-shadow: 0 0 0 3px rgba(240, 147, 251, 0.1);
+        outline: none;
+    }
+    
+    .btn-reset {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        width: 100%;
+        margin: 10px 0;
+        transition: transform 0.2s ease;
+    }
+    
+    .btn-reset:hover:not(:disabled) {
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .btn-reset:disabled {
+        background: #cbd5e0;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .back-to-login {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .back-link {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+    
+    .back-link:hover {
+        color: #5a67d8;
+        text-decoration: underline;
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .alert-success {
+        background-color: #f0fff4;
+        border: 1px solid #9ae6b4;
+        color: #22543d;
+    }
+    
+    .alert-danger {
+        background-color: #fed7d7;
+        border: 1px solid #feb2b2;
+        color: #742a2a;
+    }
+    
+    .alert-info {
+        background-color: #ebf8ff;
+        border: 1px solid #90cdf4;
+        color: #2a4365;
+    }
+    
+    .help-text {
+        font-size: 0.85rem;
+        color: #718096;
+        margin-top: 15px;
+        text-align: left;
+    }
+    
+    .input-group {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .input-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+        z-index: 2;
+    }
+    
+    .form-control.with-icon {
+        padding-left: 45px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="reset-container">
+        <div class="reset-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        
+        <h2 class="mb-3">Reset Your Password</h2>
+        <p class="text-muted mb-4">
+            Enter your email address or username and we'll send you a code to reset your password.
+        </p>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post" id="resetForm">
+            {% csrf_token %}
+            <div class="input-group">
+                <i class="fas fa-user input-icon"></i>
+                <input 
+                    type="text" 
+                    name="email_or_username" 
+                    class="form-control with-icon" 
+                    placeholder="Email address or username"
+                    required
+                    id="emailOrUsername"
+                    autocomplete="username email"
+                >
+            </div>
+            
+            <!-- Channel Selection -->
+            <div class="channel-selection mb-3">
+                <label class="form-label text-start" style="font-size: 0.9rem; color: #4a5568;">Send reset code via:</label>
+                <div class="d-flex gap-3 justify-content-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="otp_channel" id="channelEmail" value="EMAIL" checked>
+                        <label class="form-check-label" for="channelEmail">
+                            <i class="fas fa-envelope"></i> Email
+                        </label>
+                    </div>
+                    <div class="form-check" id="smsOption" style="display: none;">
+                        <input class="form-check-input" type="radio" name="otp_channel" id="channelSMS" value="SMS">
+                        <label class="form-check-label" for="channelSMS">
+                            <i class="fas fa-mobile-alt"></i> SMS
+                        </label>
+                    </div>
+                    <div class="form-check" id="bothOption" style="display: none;">
+                        <input class="form-check-input" type="radio" name="otp_channel" id="channelBoth" value="BOTH">
+                        <label class="form-check-label" for="channelBoth">
+                            <i class="fas fa-paper-plane"></i> Both
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-reset" id="resetBtn">
+                <span class="btn-text">Send Reset Code</span>
+            </button>
+        </form>
+        
+        <div class="help-text">
+            <p><i class="fas fa-info-circle"></i> <strong>Tips:</strong></p>
+            <ul>
+                <li>Use the email address you registered with</li>
+                <li>Check your spam folder if you don't receive the email</li>
+                <li>The reset code will expire in 5 minutes</li>
+            </ul>
+        </div>
+        
+        <div class="back-to-login">
+            <p class="text-muted mb-2">Remember your password?</p>
+            <a href="{% url 'login' %}" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to Login
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form submission handler
+document.getElementById('resetForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('resetBtn');
+    const btnText = btn.querySelector('.btn-text');
+    const input = document.getElementById('emailOrUsername');
+    
+    // Basic validation
+    if (!input.value.trim()) {
+        e.preventDefault();
+        input.focus();
+        return;
+    }
+    
+    btn.disabled = true;
+    btnText.innerHTML = '<span class="loading-spinner"></span>Sending...';
+});
+
+// Focus on input when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('emailOrUsername').focus();
+});
+
+// Auto-detect if input is email or username and update placeholder
+document.getElementById('emailOrUsername').addEventListener('input', function(e) {
+    const value = this.value.trim();
+    const icon = document.querySelector('.input-icon');
+    
+    if (value.includes('@')) {
+        icon.className = 'fas fa-envelope input-icon';
+        this.placeholder = 'Email address';
+    } else {
+        icon.className = 'fas fa-user input-icon';
+        this.placeholder = 'Username';
+    }
+    
+    // Check for SMS availability (simulated - in real app would call backend)
+    // For now, show SMS options for demonstration
+    if (value.length > 3) {
+        setTimeout(checkSmsAvailability, 500);
+    } else {
+        hideSmsOptions();
+    }
+});
+
+// Function to show SMS options (would check backend for phone number)
+function checkSmsAvailability() {
+    const smsOption = document.getElementById('smsOption');
+    const bothOption = document.getElementById('bothOption');
+    
+    // Show SMS options (in real app, would check if user has phone number)
+    smsOption.style.display = 'block';
+    bothOption.style.display = 'block';
+}
+
+// Function to hide SMS options
+function hideSmsOptions() {
+    const smsOption = document.getElementById('smsOption');
+    const bothOption = document.getElementById('bothOption');
+    const emailOption = document.getElementById('channelEmail');
+    
+    smsOption.style.display = 'none';
+    bothOption.style.display = 'none';
+    emailOption.checked = true;
+}
+</script>
+{% endblock %}

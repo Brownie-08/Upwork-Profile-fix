@@ -1,0 +1,518 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Profile Header -->
+    <div class="profile-header position-relative">
+        {% if user == request.user %}
+        <button class="btn edit-profile-btn" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+            <i class="fas fa-edit me-2"></i>Edit Profile
+        </button>
+        {% endif %}
+        <div class="row">
+            <div class="col-md-4 text-center">
+                <img class="rounded-circle account-img" src="{{ user.profile.profile_picture.url }}" alt="Profile Picture">
+            </div>
+            <div class="col-md-8">
+                <h1 class="display-4">{{ user.get_full_name }}</h1>
+                <h3 class="text-muted mb-3">{{ user.profile.title }}</h3>
+                <p class="lead mb-4">{{ user.profile.bio }}</p>
+                <div class="stats-container">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="stat-item">
+                                <i class="fas fa-map-marker-alt fa-fw"></i>
+                                <span>{{ user.profile.location }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-dollar-sign fa-fw"></i>
+                                <span>${{ user.profile.hourly_rate }}/hour</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-item">
+                                <i class="fas fa-star fa-fw"></i>
+                                <span>{{ user.profile.get_average_rating|floatformat:1 }} / 5.0</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-check-circle fa-fw"></i>
+                                <span>{{ user.profile.success_rate|floatformat:1 }}% Success Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="overview-tab" data-bs-toggle="tab" href="#overview">
+                <i class="fas fa-user-circle me-2"></i>Overview
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="experience-tab" data-bs-toggle="tab" href="#experience">
+                <i class="fas fa-briefcase me-2"></i>Experience
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="education-tab" data-bs-toggle="tab" href="#education">
+                <i class="fas fa-graduation-cap me-2"></i>Education
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="portfolio-tab" data-bs-toggle="tab" href="#portfolio">
+                <i class="fas fa-folder-open me-2"></i>Portfolio
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="skills-tab" data-bs-toggle="tab" href="#skills">
+                <i class="fas fa-tools me-2"></i>Skills
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="profileTabsContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-address-card me-2"></i>Contact Information
+                    </h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="stat-item">
+                                <i class="fas fa-envelope fa-fw"></i>
+                                <span>{{ user.email }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-phone fa-fw"></i>
+                                <span>{{ user.profile.phone_number }}</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-language fa-fw"></i>
+                                <span>{{ user.profile.languages }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-link me-2"></i>Professional Profiles
+                    </h5>
+                    <div class="social-links mb-4">
+                        {% if user.profile.linkedin_profile %}
+                        <a href="{{ user.profile.linkedin_profile }}" class="btn btn-primary">
+                            <i class="fab fa-linkedin me-2"></i>LinkedIn
+                        </a>
+                        {% endif %}
+                        {% if user.profile.github_profile %}
+                        <a href="{{ user.profile.github_profile }}" class="btn btn-dark">
+                            <i class="fab fa-github me-2"></i>GitHub
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-clock me-2"></i>Availability
+                    </h5>
+                    {% if user.profile.availability %}
+                    <div class="stats-container">
+                        <div class="stat-item">
+                            <span>Status:</span>
+                            {% if user.profile.availability.available_for_work %}
+                            <span class="badge bg-success">Available</span>
+                            {% else %}
+                            <span class="badge bg-danger">Not Available</span>
+                            {% endif %}
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-hourglass-half fa-fw"></i>
+                            <span>{{ user.profile.availability.hours_per_week }} hours/week</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-file-contract fa-fw"></i>
+                            <span>{{ user.profile.availability.get_preferred_contract_type_display }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Experience Tab -->
+        <div class="tab-pane fade" id="experience">
+            <div class="card">
+                <div class="card-body">
+                    {% if user.profile.experiences.all %}
+                        {% for exp in user.profile.experiences.all %}
+                        <div class="experience-item mb-4">
+                            <h4 class="mb-1">{{ exp.title }}</h4>
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-building me-2"></i>{{ exp.company }}
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                {{ exp.start_date|date:"M Y" }} - 
+                                {% if exp.current %}Present{% else %}{{ exp.end_date|date:"M Y" }}{% endif %}
+                            </p>
+                            <p class="mb-0">{{ exp.description }}</p>
+                        </div>
+                        {% if not forloop.last %}<hr class="my-4">{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No experience added yet.</p>
+                    {% endif %}
+                    
+                    {% if user == request.user %}
+                    <button class="btn btn-primary mt-4" data-bs-toggle="modal" data-bs-target="#addExperienceModal">
+                        <i class="fas fa-plus me-2"></i>Add Experience
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Education Tab -->
+        <div class="tab-pane fade" id="education">
+            <div class="card">
+                <div class="card-body">
+                    {% if user.profile.education.all %}
+                        {% for edu in user.profile.education.all %}
+                        <div class="education-item mb-4">
+                            <h4 class="mb-1">{{ edu.degree }} in {{ edu.field_of_study }}</h4>
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-university me-2"></i>{{ edu.institution }}
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                {{ edu.start_date|date:"M Y" }} - 
+                                {% if edu.current %}Present{% else %}{{ edu.end_date|date:"M Y" }}{% endif %}
+                            </p>
+                            {% if edu.description %}
+                            <p class="mb-0">{{ edu.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% if not forloop.last %}<hr class="my-4">{% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No education added yet.</p>
+                    {% endif %}
+                    
+                    {% if user == request.user %}
+                    <button class="btn btn-primary mt-4" data-bs-toggle="modal" data-bs-target="#addEducationModal">
+                        <i class="fas fa-plus me-2"></i>Add Education
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Tab -->
+        <div class="tab-pane fade" id="portfolio">
+            <div class="row">
+                {% if user.profile.portfolio_items.all %}
+                    {% for item in user.profile.portfolio_items.all %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card portfolio-card h-100">
+                            {% if item.image %}
+                            <img src="{{ item.image.url }}" class="card-img-top portfolio-image" alt="{{ item.title }}">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ item.title }}</h5>
+                                <p class="card-text">{{ item.description }}</p>
+                                <p class="small text-muted">
+                                    <i class="fas fa-code me-2"></i>{{ item.technologies_used }}
+                                </p>
+                                {% if item.project_url %}
+                                <a href="{{ item.project_url }}" class="btn btn-primary" target="_blank">
+                                    <i class="fas fa-external-link-alt me-2"></i>View Project
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col">
+                        <p class="text-muted">No portfolio items added yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            {% if user == request.user %}
+            <button class="btn btn-primary mt-4" data-bs-toggle="modal" data-bs-target="#addPortfolioModal">
+                <i class="fas fa-plus me-2"></i>Add Portfolio Item
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Skills Tab -->
+        <div class="tab-pane fade" id="skills">
+            <div class="card">
+                <div class="card-body">
+                    {% if user.profile.profile_skills.all %}
+                    {% regroup user.profile.profile_skills.all by skill.category as skill_categories %}
+                    {% for category in skill_categories %}
+                    <div class="skill-category mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-folder me-2"></i>{{ category.grouper }}
+                        </h5>
+                        <div class="skills-grid">
+                            {% for profile_skill in category.list %}
+                            <div class="skill-item">
+                                <div class="d-flex align-items-center">
+                                    <strong class="me-2">{{ profile_skill.skill.name }}</strong>
+                                    {% if profile_skill.verified %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary">{{ profile_skill.get_proficiency_display }}</span>
+                                    <small class="text-muted">({{ profile_skill.years_of_experience }} years)</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No skills added yet.</p>
+                {% endif %}
+                
+                {% if user == request.user %}
+                <button class="btn btn-primary mt-4" data-bs-toggle="modal" data-bs-target="#addSkillModal">
+                    <i class="fas fa-plus me-2"></i>Add Skill
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+{% if user.is_authenticated and user == request.user %}
+
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit me-2"></i>Edit Profile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'edit-profile' %}" enctype="multipart/form-data" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="mb-3">Basic Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Profile Picture</label>
+                                <input type="file" name="profile_picture" class="form-control" accept="image/*">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Title</label>
+                                <input type="text" name="title" class="form-control" value="{{ user.profile.title }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Bio</label>
+                                <textarea name="bio" class="form-control" rows="4">{{ user.profile.bio }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="mb-3">Contact Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Location</label>
+                                <input type="text" name="location" class="form-control" value="{{ user.profile.location }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="tel" name="phone_number" class="form-control" value="{{ user.profile.phone_number }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Languages</label>
+                                <input type="text" name="languages" class="form-control" value="{{ user.profile.languages }}">
+                            </div>
+                        </div>
+
+                        <!-- Professional Information -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="mb-3">Professional Information</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Hourly Rate ($)</label>
+                                <input type="number" name="hourly_rate" class="form-control" value="{{ user.profile.hourly_rate }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">LinkedIn Profile</label>
+                                <input type="url" name="linkedin_profile" class="form-control" value="{{ user.profile.linkedin_profile }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">GitHub Profile</label>
+                                <input type="url" name="github_profile" class="form-control" value="{{ user.profile.github_profile }}">
+                            </div>
+                        </div>
+
+                        <!-- Availability -->
+                        <div class="col-md-6 mb-3">
+                            <h6 class="mb-3">Availability</h6>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="available_for_work" class="form-check-input" 
+                                        {% if user.profile.availability.available_for_work %}checked{% endif %}>
+                                    <label class="form-check-label">Available for Work</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Hours per Week</label>
+                                <input type="number" name="hours_per_week" class="form-control" 
+                                    value="{{ user.profile.availability.hours_per_week }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Preferred Contract Type</label>
+                                <select name="preferred_contract_type" class="form-select">
+                                    <option value="FT" {% if user.profile.availability.preferred_contract_type == 'FT' %}selected{% endif %}>
+                                        Full Time
+                                    </option>
+                                    <option value="PT" {% if user.profile.availability.preferred_contract_type == 'PT' %}selected{% endif %}>
+                                        Part Time
+                                    </option>
+                                    <option value="FL" {% if user.profile.availability.preferred_contract_type == 'FL' %}selected{% endif %}>
+                                        Freelance
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Experience Modal -->
+<div class="modal fade" id="addExperienceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-briefcase me-2"></i>Add Experience
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'add-experience' %}" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {{ experience_form|crispy }}
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="fas fa-save me-2"></i>Save Experience
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Education Modal -->
+<div class="modal fade" id="addEducationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-graduation-cap me-2"></i>Add Education
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'add-education' %}" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {{ education_form|crispy }}
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="fas fa-save me-2"></i>Save Education
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Portfolio Modal -->
+<div class="modal fade" id="addPortfolioModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-folder-open me-2"></i>Add Portfolio Item
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'add-portfolio' %}" enctype="multipart/form-data" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {{ portfolio_form|crispy }}
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="fas fa-save me-2"></i>Save Portfolio Item
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skills Modal -->
+<div class="modal fade" id="addSkillModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tools me-2"></i>Add Skill
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'add-skill' %}" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    {{ skill_form|crispy }}
+                    <button type="submit" class="btn btn-primary w-100 mt-3">
+                        <i class="fas fa-save me-2"></i>Save Skill
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form Validation Script -->
+<script>
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+</script>
+{% endif %}
+{% endblock %}

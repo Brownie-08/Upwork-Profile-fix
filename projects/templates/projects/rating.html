@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container">
+    <h2>Rate {{ project.title }}</h2>
+    <p>You are rating as a {{ user_type }}</p>
+    
+    {% if project.status == 'COMPLETED' %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="rating mb-3">
+                <input type="hidden" id="id_rating" name="rating">
+                <div id="stars">
+                    {% for i in "12345" %}
+                        <span class="star" data-value="{{ i }}">&#9733;</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {{ form.comment|crispy}}
+            <button type="submit" class="btn btn-primary">Submit Rating</button>
+        </form>
+    {% else %}
+        <p>The project is not completed yet. You can rate once the project is marked as completed.</p>
+    {% endif %}
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const stars = document.querySelectorAll(".star");
+        const ratingInput = document.querySelector("#id_rating");
+
+        stars.forEach((star, index) => {
+            star.addEventListener("mouseover", () => {
+                highlightStars(index + 1);
+            });
+            star.addEventListener("click", () => {
+                ratingInput.value = index + 1;
+            });
+        });
+
+        function highlightStars(count) {
+            stars.forEach((star, idx) => {
+                star.style.color = idx < count ? "gold" : "gray";
+            });
+        }
+    });
+</script>
+{% endblock %}

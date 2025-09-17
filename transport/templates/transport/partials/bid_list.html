@@ -1,0 +1,9 @@
+{% if bids %}
+    {% for bid in bids %}
+        {% include 'taxi/partials/bid_item.html' with bid=bid %}
+    {% endfor %}
+{% else %}
+    <div class="text-center py-8 bg-gray-50 rounded-lg">
+        <p class="text-gray-500">No bids have been placed yet.</p>
+    </div>
+{% endif %}

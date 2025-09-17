@@ -1,0 +1,171 @@
+/* LusitoHub Custom Admin Styles */
+
+:root {
+    --admin-primary: #2563eb;
+    --admin-primary-dark: #1d4ed8;
+    --admin-secondary: #64748b;
+    --admin-success: #059669;
+    --admin-warning: #d97706;
+    --admin-danger: #dc2626;
+    --admin-light-bg: #f8fafc;
+    --admin-white: #ffffff;
+    --admin-border: #e2e8f0;
+}
+
+/* Override Jazzmin primary colors */
+.navbar-primary {
+    background-color: var(--admin-primary) !important;
+}
+
+.navbar-primary .navbar-brand {
+    color: var(--admin-white) !important;
+    font-weight: 700;
+}
+
+/* Sidebar customizations */
+.sidebar-dark-primary {
+    background-color: var(--admin-primary) !important;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active,
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link:hover {
+    background-color: var(--admin-primary-dark) !important;
+    color: var(--admin-white) !important;
+}
+
+/* Button customizations */
+.btn-primary {
+    background-color: var(--admin-primary) !important;
+    border-color: var(--admin-primary) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: var(--admin-primary-dark) !important;
+    border-color: var(--admin-primary-dark) !important;
+}
+
+.btn-success {
+    background-color: var(--admin-success) !important;
+    border-color: var(--admin-success) !important;
+}
+
+.btn-warning {
+    background-color: var(--admin-warning) !important;
+    border-color: var(--admin-warning) !important;
+}
+
+.btn-danger {
+    background-color: var(--admin-danger) !important;
+    border-color: var(--admin-danger) !important;
+}
+
+/* Card customizations */
+.card {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--admin-border);
+}
+
+.card-header {
+    background-color: var(--admin-light-bg);
+    border-bottom: 1px solid var(--admin-border);
+}
+
+/* Content wrapper background */
+.content-wrapper {
+    background-color: var(--admin-light-bg) !important;
+}
+
+/* Main footer */
+.main-footer {
+    background-color: var(--admin-white);
+    border-top: 1px solid var(--admin-border);
+}
+
+/* Form customizations */
+.form-control:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* Tables */
+.table th {
+    background-color: var(--admin-light-bg);
+    border-bottom: 2px solid var(--admin-border);
+}
+
+/* Links */
+a {
+    color: var(--admin-primary);
+}
+
+a:hover {
+    color: var(--admin-primary-dark);
+}
+
+/* Brand logo adjustments */
+.navbar-brand img {
+    max-height: 35px;
+    width: auto;
+}
+
+/* Custom dashboard cards */
+.info-box {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--admin-border);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand img {
+        max-height: 30px;
+    }
+}
+
+/* Custom status badges */
+.badge-primary {
+    background-color: var(--admin-primary) !important;
+}
+
+.badge-success {
+    background-color: var(--admin-success) !important;
+}
+
+.badge-warning {
+    background-color: var(--admin-warning) !important;
+}
+
+.badge-danger {
+    background-color: var(--admin-danger) !important;
+}
+
+/* Alert customizations */
+.alert-primary {
+    background-color: rgba(37, 99, 235, 0.1);
+    border-color: var(--admin-primary);
+    color: var(--admin-primary-dark);
+}
+
+.alert-success {
+    background-color: rgba(5, 150, 105, 0.1);
+    border-color: var(--admin-success);
+    color: #065f46;
+}
+
+.alert-warning {
+    background-color: rgba(217, 119, 6, 0.1);
+    border-color: var(--admin-warning);
+    color: #92400e;
+}
+
+.alert-danger {
+    background-color: rgba(220, 38, 38, 0.1);
+    border-color: var(--admin-danger);
+    color: #991b1b;
+}
+
+/* Logo container */
+.brand-text {
+    font-weight: 700 !important;
+}

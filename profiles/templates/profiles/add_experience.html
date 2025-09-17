@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Add Experience{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card">
+        <h2 class="card-title ">Add Experience</h2>
+        <div class="card-body">
+            
+            <form method="POST">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-success mt-3">Add Experience</button>
+                <a href="{% url 'profiles:profile' %}" class="btn btn-secondary mt-3">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

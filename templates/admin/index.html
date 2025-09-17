@@ -1,0 +1,473 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+.dashboard-stats {
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-bottom: 15px;
+}
+
+.stat-card.success {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.stat-card.warning {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.stat-card.danger {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.stat-number {
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.recent-activity {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-top: 20px;
+}
+
+.activity-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.welcome-message {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #2563eb;
+}
+
+.notification-badge {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 400px;
+}
+
+.notification-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.notification-item.success {
+    border-left: 4px solid #10b981;
+}
+
+.notification-item.info {
+    border-left: 4px solid #3b82f6;
+}
+
+.notification-item.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.notification-close {
+    float: right;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+.notification-close:hover {
+    color: #374151;
+}
+
+.live-notifications {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.connection-status {
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.connection-status.connected {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.connection-status.disconnected {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+.connection-status.connecting {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="welcome-message">
+    <h2><i class="fas fa-truck"></i> Welcome to LusitoHub Administration</h2>
+    <p>Manage your transport platform efficiently with our comprehensive admin dashboard</p>
+</div>
+
+<div class="dashboard-stats">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_users|default:"0" }}</div>
+                <div class="stat-label"><i class="fas fa-users"></i> Total Users</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card success">
+                <div class="stat-number">{{ active_transports|default:"0" }}</div>
+                <div class="stat-label"><i class="fas fa-truck"></i> Active Transports</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card warning">
+                <div class="stat-number">{{ pending_documents|default:"0" }}</div>
+                <div class="stat-label"><i class="fas fa-file-alt"></i> Pending Documents</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card danger">
+                <div class="stat-number">{{ total_transactions|default:"0" }}</div>
+                <div class="stat-label"><i class="fas fa-exchange-alt"></i> Transactions</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        {{ block.super }}
+    </div>
+    <div class="col-md-4">
+        <div class="recent-activity">
+            <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+            <div class="activity-item">
+                <i class="fas fa-user-plus text-success"></i> New user registration
+                <span class="text-muted float-right">2 hours ago</span>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-truck text-primary"></i> New transport request
+                <span class="text-muted float-right">3 hours ago</span>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-check-circle text-success"></i> Document verified
+                <span class="text-muted float-right">5 hours ago</span>
+            </div>
+            <div class="activity-item">
+                <i class="fas fa-credit-card text-warning"></i> Payment processed
+                <span class="text-muted float-right">1 day ago</span>
+            </div>
+        </div>
+
+        <div class="recent-activity mt-3">
+            <h3><i class="fas fa-chart-line"></i> Quick Stats</h3>
+            <div class="activity-item">
+                <strong>Today's Registrations:</strong>
+                <span class="badge badge-primary float-right">{{ today_registrations|default:"0" }}</span>
+            </div>
+            <div class="activity-item">
+                <strong>Pending Verifications:</strong>
+                <span class="badge badge-warning float-right">{{ pending_verifications|default:"0" }}</span>
+            </div>
+            <div class="activity-item">
+                <strong>Active Operators:</strong>
+                <span class="badge badge-success float-right">{{ active_operators|default:"0" }}</span>
+            </div>
+        </div>
+        
+        <div class="live-notifications">
+            <h3><i class="fas fa-bell"></i> Live Notifications</h3>
+            <div id="connection-status" class="connection-status connecting">
+                <i class="fas fa-circle"></i> Connecting...
+            </div>
+            <div id="live-notifications-feed">
+                <p class="text-muted text-center">Waiting for notifications...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notification area -->
+<div id="notification-toasts" class="notification-badge"></div>
+
+<script>
+// Admin Notifications WebSocket
+class AdminNotifications {
+    constructor() {
+        this.socket = null;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.reconnectDelay = 1000;
+        this.pingInterval = null;
+        
+        this.connectionStatus = document.getElementById('connection-status');
+        this.notificationsFeed = document.getElementById('live-notifications-feed');
+        this.toastContainer = document.getElementById('notification-toasts');
+        
+        this.connect();
+    }
+    
+    connect() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
+        
+        console.log('Attempting to connect to:', wsUrl);
+        
+        try {
+            this.socket = new WebSocket(wsUrl);
+            
+            this.socket.onopen = (event) => {
+                console.log('WebSocket connected');
+                this.onConnect();
+            };
+            
+            this.socket.onmessage = (event) => {
+                console.log('WebSocket message received:', event.data);
+                this.onMessage(event);
+            };
+            
+            this.socket.onclose = (event) => {
+                console.log('WebSocket closed:', event.code, event.reason);
+                this.onDisconnect(event);
+            };
+            
+            this.socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                this.onError(error);
+            };
+            
+        } catch (error) {
+            console.error('Failed to create WebSocket connection:', error);
+            this.onError(error);
+        }
+    }
+    
+    onConnect() {
+        this.reconnectAttempts = 0;
+        this.updateConnectionStatus('connected', '<i class="fas fa-check-circle"></i> Connected to live notifications');
+        
+        // Start ping/pong to keep connection alive
+        this.pingInterval = setInterval(() => {
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(JSON.stringify({
+                    type: 'ping',
+                    timestamp: Date.now()
+                }));
+            }
+        }, 30000); // Ping every 30 seconds
+        
+        this.clearWaitingMessage();
+    }
+    
+    onDisconnect(event) {
+        this.updateConnectionStatus('disconnected', '<i class="fas fa-times-circle"></i> Disconnected from notifications');
+        
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+        
+        // Attempt to reconnect if not intentionally closed
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.scheduleReconnect();
+        }
+    }
+    
+    onError(error) {
+        console.error('WebSocket connection error:', error);
+        this.updateConnectionStatus('disconnected', '<i class="fas fa-exclamation-triangle"></i> Connection error');
+    }
+    
+    onMessage(event) {
+        try {
+            const data = JSON.parse(event.data);
+            
+            switch (data.type) {
+                case 'connection_established':
+                    console.log('Connection established:', data.message);
+                    break;
+                    
+                case 'pong':
+                    // Handle ping/pong response
+                    console.log('Received pong');
+                    break;
+                    
+                case 'admin_notification':
+                    this.handleNotification(data);
+                    break;
+                    
+                default:
+                    console.log('Unknown message type:', data.type);
+            }
+        } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+        }
+    }
+    
+    handleNotification(data) {
+        console.log('Handling admin notification:', data);
+        
+        // Add to live feed
+        this.addToFeed(data);
+        
+        // Show toast notification
+        this.showToast(data);
+    }
+    
+    addToFeed(data) {
+        const feedItem = document.createElement('div');
+        feedItem.className = 'activity-item';
+        feedItem.innerHTML = `
+            <i class="fas fa-bell text-info"></i> ${data.message}
+            <span class="text-muted float-right">just now</span>
+        `;
+        
+        // Clear waiting message if it exists
+        this.clearWaitingMessage();
+        
+        // Add to the top of the feed
+        this.notificationsFeed.insertBefore(feedItem, this.notificationsFeed.firstChild);
+        
+        // Keep only the last 5 notifications in the feed
+        while (this.notificationsFeed.children.length > 5) {
+            this.notificationsFeed.removeChild(this.notificationsFeed.lastChild);
+        }
+    }
+    
+    showToast(data) {
+        const toast = document.createElement('div');
+        toast.className = `notification-item ${this.getNotificationClass(data.notification_type)}`;
+        toast.innerHTML = `
+            <button class="notification-close" onclick="this.parentElement.remove()">&times;</button>
+            <strong>${this.getNotificationTitle(data.notification_type)}</strong><br>
+            <small>${data.message}</small>
+        `;
+        
+        this.toastContainer.appendChild(toast);
+        
+        // Auto-remove after 8 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 8000);
+    }
+    
+    getNotificationClass(type) {
+        const classMap = {
+            'document_uploaded': 'info',
+            'permit_created': 'success',
+            'operator_assignment_created': 'info',
+            'operator_assignment_removed': 'warning'
+        };
+        return classMap[type] || 'info';
+    }
+    
+    getNotificationTitle(type) {
+        const titleMap = {
+            'document_uploaded': 'Document Uploaded',
+            'permit_created': 'Permit Created',
+            'operator_assignment_created': 'Operator Assigned',
+            'operator_assignment_removed': 'Operator Removed'
+        };
+        return titleMap[type] || 'Notification';
+    }
+    
+    updateConnectionStatus(status, message) {
+        this.connectionStatus.className = `connection-status ${status}`;
+        this.connectionStatus.innerHTML = message;
+    }
+    
+    clearWaitingMessage() {
+        const waitingMsg = this.notificationsFeed.querySelector('p.text-muted');
+        if (waitingMsg) {
+            waitingMsg.remove();
+        }
+    }
+    
+    scheduleReconnect() {
+        this.reconnectAttempts++;
+        const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
+        
+        this.updateConnectionStatus('connecting', `<i class="fas fa-sync fa-spin"></i> Reconnecting in ${Math.ceil(delay/1000)}s (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        
+        setTimeout(() => {
+            this.connect();
+        }, delay);
+    }
+    
+    disconnect() {
+        if (this.socket) {
+            this.socket.close(1000); // Normal closure
+        }
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+    }
+}
+
+// Initialize notifications when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const adminNotifications = new AdminNotifications();
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', function() {
+        adminNotifications.disconnect();
+    });
+});
+</script>
+
+{% endblock %}

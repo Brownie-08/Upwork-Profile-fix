@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Operator Dashboard - LusitoHub{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .status-chip {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    .status-pending { background-color: #fef3c7; color: #92400e; }
+    .status-approved { background-color: #d1fae5; color: #065f46; }
+    .status-rejected { background-color: #fee2e2; color: #991b1b; }
+    .status-missing { background-color: #f3f4f6; color: #6b7280; }
+    
+    .vehicle-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+    .vehicle-card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6;
+    }
+    
+    .assignment-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background: #f8fafc;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+    
+    .success-card {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0">Operator Dashboard</h1>
+            <p class="text-muted">View your assigned vehicles and manage your operator profile</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'profiles:vehicle_dashboard' %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-car me-2"></i>Vehicle Dashboard
+            </a>
+            <a href="{% url 'profiles:profile' %}" class="btn btn-primary">
+                <i class="fas fa-user me-2"></i>Profile
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-0">Active Vehicles</h5>
+                            <h2 class="mb-0">{{ total_active_vehicles }}</h2>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-car fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card info-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-0">Identity Status</h5>
+                            <p class="mb-0">
+                                {% if is_identity_verified %}
+                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                {% else %}
+                                    <i class="fas fa-exclamation-circle me-1"></i>Pending
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-id-card fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card success-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-0">License Status</h5>
+                            <p class="mb-0">
+                                {% if driver_license_status == 'APPROVED' %}
+                                    <i class="fas fa-check-circle me-1"></i>Approved
+                                {% elif driver_license_status == 'PENDING' %}
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                {% elif driver_license_status == 'REJECTED' %}
+                                    <i class="fas fa-times-circle me-1"></i>Rejected
+                                {% else %}
+                                    <i class="fas fa-upload me-1"></i>Required
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-id-badge fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver License Section -->
+    {% if driver_license_status != 'APPROVED' %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert {% if driver_license_status == 'REJECTED' %}alert-danger{% elif driver_license_status == 'PENDING' %}alert-warning{% else %}alert-info{% endif %}">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-1">
+                            {% if driver_license_status == 'REJECTED' %}
+                                <i class="fas fa-times-circle me-2"></i>Driver's License Rejected
+                            {% elif driver_license_status == 'PENDING' %}
+                                <i class="fas fa-clock me-2"></i>Driver's License Under Review
+                            {% else %}
+                                <i class="fas fa-info-circle me-2"></i>Driver's License Required
+                            {% endif %}
+                        </h6>
+                        <p class="mb-0">
+                            {% if driver_license_status == 'REJECTED' %}
+                                Your driver's license was rejected. Please upload a new one to continue operating vehicles.
+                            {% elif driver_license_status == 'PENDING' %}
+                                Your driver's license is currently being reviewed. You'll be notified once it's approved.
+                            {% else %}
+                                Please upload your driver's license to operate vehicles.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if driver_license_status != 'PENDING' %}
+                    <div class="ms-3">
+                        <button class="btn btn-light" onclick="uploadDriverLicense()">
+                            <i class="fas fa-upload me-2"></i>Upload License
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Active Assignments -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-car me-2"></i>Assigned Vehicles ({{ total_active_vehicles }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if vehicles_data %}
+                        <div class="row">
+                            {% for vehicle_data in vehicles_data %}
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="vehicle-card p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h6 class="mb-1 fw-bold">{{ vehicle_data.vehicle.plate_number }}</h6>
+                                                <small class="text-muted">
+                                                    {% if vehicle_data.vehicle.make %}
+                                                        {{ vehicle_data.vehicle.year }} {{ vehicle_data.vehicle.make }} {{ vehicle_data.vehicle.model }}
+                                                    {% else %}
+                                                        Vehicle
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            <span class="badge {% if vehicle_data.is_fully_documented %}bg-success{% else %}bg-warning{% endif %}">
+                                                {% if vehicle_data.is_fully_documented %}
+                                                    <i class="fas fa-check me-1"></i>Ready
+                                                {% else %}
+                                                    <i class="fas fa-clock me-1"></i>Pending
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Vehicle Owner -->
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block mb-1">Vehicle Owner:</small>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-user me-2 text-primary"></i>
+                                                <span class="small fw-medium">
+                                                    {{ vehicle_data.owner.get_full_name|default:vehicle_data.owner.username }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Assignment Details -->
+                                        <div class="assignment-card p-2 mb-3">
+                                            <small class="text-muted d-block mb-1">Assignment Details:</small>
+                                            <div class="small">
+                                                <div class="d-flex justify-content-between">
+                                                    <span>Assigned:</span>
+                                                    <span>{{ vehicle_data.assignment.assigned_at|date:"M d, Y" }}</span>
+                                                </div>
+                                                <div class="d-flex justify-content-between">
+                                                    <span>By:</span>
+                                                    <span>{{ vehicle_data.assignment.assigned_by.get_full_name|default:vehicle_data.assignment.assigned_by.username }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Document Status -->
+                                        <div>
+                                            <small class="text-muted d-block mb-2">Document Status:</small>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% for doc in vehicle_data.documents %}
+                                                    <span class="status-chip status-{{ doc.status|lower }} small">
+                                                        {{ doc.display }}
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-car text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">No vehicles assigned</h5>
+                            <p class="text-muted mb-4">You haven't been assigned to any vehicles yet. Contact vehicle owners to get access.</p>
+                            {% if not is_identity_verified %}
+                                <div class="alert alert-warning d-inline-block">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Complete your identity verification to be eligible for vehicle assignments.
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment History -->
+    {% if assignment_history %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Assignment History
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Vehicle</th>
+                                    <th>Owner</th>
+                                    <th>Assigned</th>
+                                    <th>Removed</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in assignment_history %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ assignment.vehicle.plate_number }}</strong>
+                                        {% if assignment.vehicle.make %}
+                                            <br><small class="text-muted">{{ assignment.vehicle.year }} {{ assignment.vehicle.make }} {{ assignment.vehicle.model }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ assignment.vehicle.owner.get_full_name|default:assignment.vehicle.owner.username }}</td>
+                                    <td>
+                                        {{ assignment.assigned_at|date:"M d, Y" }}
+                                        <br><small class="text-muted">by {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</small>
+                                    </td>
+                                    <td>
+                                        {% if assignment.deactivated_at %}
+                                            {{ assignment.deactivated_at|date:"M d, Y" }}
+                                            {% if assignment.deactivated_by %}
+                                                <br><small class="text-muted">by {{ assignment.deactivated_by.get_full_name|default:assignment.deactivated_by.username }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if assignment.deactivation_reason %}
+                                            <small>{{ assignment.deactivation_reason }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalTitle">Upload Driver's License</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="uploadDocumentForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="doc_type" value="DRIVER_LICENSE">
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Driver's License File <span class="text-danger">*</span></label>
+                        <input type="file" name="file" id="file" class="form-control" 
+                               accept=".pdf,.jpg,.jpeg,.png" required>
+                        <div class="form-text">Accepted formats: PDF, JPG, PNG (max 5MB)</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Your driver's license will be reviewed by our team. 
+                        You'll be notified once it's approved.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Upload License
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Upload driver license
+function uploadDriverLicense() {
+    new bootstrap.Modal(document.getElementById('uploadDocumentModal')).show();
+}
+
+// Upload document form submission
+document.getElementById('uploadDocumentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+    
+    fetch('{% url "profiles:upload_document_dashboard" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('uploadDocumentModal')).hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showFormErrors(data.errors);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while uploading the document.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// Utility functions
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
+
+function showFormErrors(errors) {
+    // Clear previous errors
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    
+    // Show new errors
+    for (const [field, fieldErrors] of Object.entries(errors)) {
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) {
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = Array.isArray(fieldErrors) ? fieldErrors[0] : fieldErrors;
+            input.parentNode.appendChild(feedback);
+        }
+    }
+}
+</script>
+{% endblock %}

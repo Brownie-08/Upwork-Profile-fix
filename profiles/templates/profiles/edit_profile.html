@@ -1,0 +1,213 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Edit Profile</h2>
+    <form method="post" action="{% url 'profiles:edit_profile' %}" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+
+
+        <div class="row justify-content-center">
+            <!-- Personal Information -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="card-title mb-0">Basic Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Profile Picture</label>
+                            <input type="file" id="profilePictureInput" name="profile_picture" class="form-control" accept="image/*">
+                            <div class="mt-3">
+                                <div id="previewContainer" style="display: none;">
+                                    <h5>Crop Your Picture</h5>
+                                    <img id="previewImage" src="#" alt="Preview" style="max-width: 100%; height: auto;">
+                                    <button type="button" id="cropButton" class="btn btn-success mt-2">Crop</button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="croppedImageData" name="cropped_image">
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">First Name</label>
+                                <input type="text" name="first_name" value="{{ user.profile.first_name }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Middle Name</label>
+                                <input type="text" name="middle_name" value="{{ user.profile.middle_name }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" name="last_name" value="{{ user.profile.last_name }}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">Date of Birth</label>
+                            <input type="date" name="date_of_birth" class="form-control" value="{{ user.profile.date_of_birth }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Gender</label>
+                            <select name="gender" class="form-select">
+                                <option value="M" {% if user.profile.gender == 'M' %}selected{% endif %}>Male</option>
+                                <option value="F" {% if user.profile.gender == 'F' %}selected{% endif %}>Female</option>
+                                <option value="O" {% if user.profile.gender == 'O' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" name="title" class="form-control" value="{{ user.profile.title }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Bio</label>
+                            <textarea name="bio" class="form-control" rows="4">{{ user.profile.bio }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h4 class="card-title mb-0">Contact Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Location</label>
+                            <input type="text" name="location" class="form-control" value="{{ user.profile.location }}" placeholder="Enter your location">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" name="phone_number" class="form-control" value="{{ user.profile.phone_number }}" placeholder="+268 76000000">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Languages</label>
+                            <input type="text" name="languages" class="form-control" value="{{ user.profile.languages }}" placeholder="e.g., English, Spanish, French">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Professional Information -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="card-title mb-0">Professional Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Hourly Rate (E)</label>
+                            <input type="number" name="hourly_rate" class="form-control" value="{{ user.profile.hourly_rate }}" placeholder="Enter your hourly rate">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">LinkedIn Profile</label>
+                            <input type="url" name="linkedin_profile" class="form-control" value="{{ user.profile.linkedin_profile }}" placeholder="LinkedIn URL">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">GitHub Profile</label>
+                            <input type="url" name="github_profile" class="form-control" value="{{ user.profile.github_profile }}" placeholder="GitHub URL">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Availability -->
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="card-title mb-0">Availability</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" name="available_for_work" class="form-check-input" 
+                                    {% if user.profile.availability.available_for_work %}checked{% endif %}>
+                                <label class="form-check-label">Available for Work</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hours per Week</label>
+                            <input type="number" name="hours_per_week" class="form-control" 
+                                value="{{ user.profile.availability.hours_per_week }}" placeholder="Enter hours">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Preferred Contract Type</label>
+                            <select name="preferred_contract_type" class="form-select">
+                                <option value="FT" {% if user.profile.availability.preferred_contract_type == 'FT' %}selected{% endif %}>
+                                    Full Time
+                                </option>
+                                <option value="PT" {% if user.profile.availability.preferred_contract_type == 'PT' %}selected{% endif %}>
+                                    Part Time
+                                </option>
+                                <option value="FL" {% if user.profile.availability.preferred_contract_type == 'FL' %}selected{% endif %}>
+                                    Freelance
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save me-2"></i>Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let cropper;
+        const profilePictureInput = document.getElementById("profilePictureInput");
+        const previewContainer = document.getElementById("previewContainer");
+        const previewImage = document.getElementById("previewImage");
+        const cropButton = document.getElementById("cropButton");
+        const croppedImageData = document.getElementById("croppedImageData");
+
+        profilePictureInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    previewImage.src = e.target.result;
+                    previewContainer.style.display = "block";
+
+                    // Destroy existing cropper instance if present
+                    if (cropper) cropper.destroy();
+
+                    // Initialize Cropper.js
+                    cropper = new Cropper(previewImage, {
+                        aspectRatio: 1,
+                        viewMode: 2,
+                        autoCropArea: 1,
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        cropButton.addEventListener("click", function () {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas({
+                    width: 300, // Adjust dimensions as needed
+                    height: 300,
+                });
+                // Convert cropped canvas to base64 string
+                croppedImageData.value = canvas.toDataURL("image/png");
+                alert("Image cropped and ready to save!");
+            }
+        });
+    });
+</script>
+
+{% endblock %}

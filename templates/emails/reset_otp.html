@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your LusitoHub Password</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 0;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .logo {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .title-message {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 30px;
+        }
+        
+        .security-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        
+        .security-notice h4 {
+            color: #856404;
+            margin-top: 0;
+        }
+        
+        .security-notice p {
+            color: #856404;
+            margin-bottom: 0;
+        }
+        
+        .otp-container {
+            background-color: #f8f9fa;
+            border: 2px dashed #f093fb;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .otp-label {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .otp-code {
+            font-size: 36px;
+            font-weight: bold;
+            color: #f093fb;
+            letter-spacing: 8px;
+            margin: 10px 0;
+            padding: 15px 25px;
+            background: white;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .expiry-notice {
+            font-size: 14px;
+            color: #666;
+            margin-top: 15px;
+        }
+        
+        .instructions {
+            background-color: #ffe6f0;
+            border-left: 4px solid #f093fb;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .instructions ol {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .footer-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #f093fb;
+            text-decoration: none;
+        }
+        
+        .warning-section {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        
+        .warning-section h4 {
+            color: #721c24;
+            margin-top: 0;
+        }
+        
+        .warning-section p {
+            color: #721c24;
+            margin-bottom: 0;
+        }
+        
+        .tips-section {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        
+        .tips-section h4 {
+            color: #0c5460;
+            margin-top: 0;
+        }
+        
+        .tips-section ul {
+            color: #0c5460;
+            margin-bottom: 0;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 0;
+            }
+            
+            .content {
+                padding: 20px 15px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .otp-code {
+                font-size: 28px;
+                letter-spacing: 4px;
+                padding: 12px 15px;
+            }
+            
+            .otp-container {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="logo">🔒 LusitoHub</h1>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content">
+            <h2 class="title-message">Password Reset Request</h2>
+            
+            <p class="greeting">Hello {{ user.first_name|default:user.username }},</p>
+            
+            <p>We received a request to reset the password for your LusitoHub account. If you requested this password reset, please use the verification code below to proceed.</p>
+            
+            <div class="security-notice">
+                <h4>🔐 Security Notice</h4>
+                <p>For your security, this code will expire in {{ expires_minutes }} minutes and can only be used once. Do not share this code with anyone.</p>
+            </div>
+            
+            <div class="otp-container">
+                <div class="otp-label">Your password reset code is:</div>
+                <div class="otp-code">{{ otp_code }}</div>
+                <div class="expiry-notice">⏰ This code expires in {{ expires_minutes }} minutes</div>
+            </div>
+            
+            <div class="instructions">
+                <h3>🔧 How to reset your password:</h3>
+                <ol>
+                    <li>Return to the LusitoHub password reset page</li>
+                    <li>Enter the 6-digit code above</li>
+                    <li>Create a new secure password</li>
+                    <li>Confirm your new password</li>
+                </ol>
+            </div>
+            
+            <div class="tips-section">
+                <h4>💡 Tips for a strong password:</h4>
+                <ul>
+                    <li>Use at least 8 characters</li>
+                    <li>Include both letters and numbers</li>
+                    <li>Consider using special characters</li>
+                    <li>Avoid common words or personal information</li>
+                    <li>Use a unique password you don't use elsewhere</li>
+                </ul>
+            </div>
+            
+            <div class="warning-section">
+                <h4>⚠️ Didn't request a password reset?</h4>
+                <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged. For security, consider enabling two-factor authentication on your account.</p>
+            </div>
+            
+            <p>If you're having trouble with the password reset process, please contact our support team for assistance.</p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text">
+                This email was sent by LusitoHub. If you have any questions, please contact our support team.
+            </div>
+            <div class="social-links">
+                <a href="#" style="color: #f093fb;">Privacy Policy</a> |
+                <a href="#" style="color: #f093fb;">Terms of Service</a> |
+                <a href="#" style="color: #f093fb;">Support</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

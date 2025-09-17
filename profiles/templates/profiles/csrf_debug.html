@@ -1,0 +1,80 @@
+{% extends "core/base.html" %}
+
+{% block title %}CSRF Debug{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h3>🔍 CSRF Debug Information</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Current CSRF Token:</h5>
+                    <code>{{ csrf_token }}</code>
+                    
+                    <hr>
+                    
+                    <h5>Debug Information:</h5>
+                    <table class="table table-striped">
+                        <tr>
+                            <td><strong>Request Method:</strong></td>
+                            <td>{{ debug_info.method }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Is Secure (HTTPS):</strong></td>
+                            <td>{% if debug_info.secure %}✅ Yes{% else %}❌ No{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Host:</strong></td>
+                            <td>{{ debug_info.host }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Referer:</strong></td>
+                            <td>{{ debug_info.headers.referer }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Origin:</strong></td>
+                            <td>{{ debug_info.headers.origin }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CSRF Cookie:</strong></td>
+                            <td>{% if debug_info.cookies.csrftoken != 'Not found' %}✅ Found{% else %}❌ Not found{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Session Cookie:</strong></td>
+                            <td>{% if debug_info.cookies.sessionid != 'Not found' %}✅ Found{% else %}❌ Not found{% endif %}</td>
+                        </tr>
+                    </table>
+                    
+                    <hr>
+                    
+                    <h5>Test CSRF Form:</h5>
+                    <form method="POST" action="{% url 'profiles:csrf_test' %}">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="test_data">Test Data:</label>
+                            <input type="text" class="form-control" id="test_data" name="test_data" value="CSRF Test">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Test CSRF Submission</button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="alert alert-info">
+                        <h6>🛠️ Troubleshooting Tips:</h6>
+                        <ul>
+                            <li>Ensure CSRF cookie is present in browser</li>
+                            <li>Check that form includes {% raw %}{% csrf_token %}{% endraw %}</li>
+                            <li>Verify HTTPS is working properly</li>
+                            <li>Check trusted origins configuration</li>
+                            <li>Clear browser cache and cookies</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

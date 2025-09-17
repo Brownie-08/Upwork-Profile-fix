@@ -1,0 +1,10 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h2>Notifications</h2>
+<ul>
+    {% for notification in notifications %}
+        <li>{{ notification.message.content }} - {{ notification.get_notification_type_display }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}

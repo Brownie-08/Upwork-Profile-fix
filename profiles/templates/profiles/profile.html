@@ -1,0 +1,2842 @@
+{% extends 'core/base.html' %}
+{% load crispy_forms_tags %}
+{% load profile_tags %}
+{% load static %}
+
+{% block head %}
+<style>
+    /* Fix modal backdrop z-index */
+    .modal {
+        z-index: 1060 !important;
+    }
+    .modal-backdrop {
+        z-index: 1050 !important;
+    }
+    /* Ensure only one backdrop */
+    .modal-backdrop ~ .modal-backdrop {
+        display: none !important;
+    }
+    /* Portfolio card hover effect */
+    .portfolio-card {
+        transition: transform 0.2s;
+    }
+    .portfolio-card:hover {
+        transform: translateY(-5px);
+    }
+    /* Error message styling */
+    .error-message {
+        display: none;
+        margin-top: 0.5rem;
+    }
+    .vehicle-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: linear-gradient(145deg, #ffffff, #f1f5f9);
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .vehicle-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+    .card-header {
+        background: linear-gradient(to right, #3b82f6, #1e40af);
+        border-radius: 12px 12px 0 0;
+    }
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.4em 0.8em;
+        border-radius: 12px;
+    }
+    .btn-primary, .btn-outline-primary {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+    }
+    .btn-primary:hover, .btn-outline-primary:hover {
+        transform: scale(1.05);
+    }
+    .document-toggle {
+        cursor: pointer;
+        color: #3b82f6;
+        font-size: 0.9rem;
+        transition: color 0.3s ease;
+    }
+    .document-toggle:hover {
+        color: #1e40af;
+        text-decoration: underline;
+    }
+    .alert {
+        padding: 0.5rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+    .vehicle-documents {
+        transition: max-height 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<!-- Messages Section -->
+<div class="container mt-4">
+    {% if messages %}
+        <div id="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<div class="container py-5">
+    <!-- Profile Header -->
+    <div class="profile-header position-relative mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-center">
+                <img class="rounded-circle account-img img-fluid" 
+                     src="{% if user.profile.profile_picture and user.profile.profile_picture.name != 'default.jpg' %}{{ user.profile.profile_picture.url }}{% else %}{% static 'images/user-avatar.svg' %}{% endif %}" 
+                     alt="Profile Picture" 
+                     style="max-width: 200px;" 
+                     onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIxMDAiIGZpbGw9IiNmOGZhZmMiIHN0cm9rZT0iI2UyZThmMCIgc3Ryb2tlLXdpZHRoPSIyIi8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTAwLCAxMDApIj48Y2lyY2xlIGN4PSIwIiBjeT0iLTI1IiByPSIyNSIgZmlsbD0iIzk0YTNiOCIvPjxlbGxpcHNlIGN4PSIwIiBjeT0iMjUiIHJ4PSI0MCIgcnk9IjUwIiBmaWxsPSIjOTRhM2I4Ii8+PC9nPjwvc3ZnPg=='">
+                <div class="mt-2">
+                    {% if user.profile.is_identity_verified %}
+                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> Identity Verified</span>
+                    {% else %}
+                        <span class="badge bg-warning"><i class="fas fa-exclamation-circle"></i> Identity Not Verified</span>
+                    {% endif %}
+                    {% if user.profile.is_vehicle_verified %}
+                        <span class="badge bg-success"><i class="fas fa-car"></i> Vehicle Verified</span>
+                    {% endif %}
+                    {% if user.profile.is_permit_verified %}
+                        <span class="badge bg-success"><i class="fas fa-file-alt"></i> Permit Verified</span>
+                    {% endif %}
+                    {% if transport_badge and transport_badge.authorized %}
+                        <span class="badge bg-primary"><i class="fas fa-certificate"></i> Authorized Transport Provider</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-8">
+                <h1 class="display-4">{{ user.profile.first_name }} {{ user.profile.middle_name }} {{ user.profile.last_name }}</h1>
+                <h3 class="text-muted mb-3">
+                    {{ user.profile.title }}
+                    {% if user.profile.account_type != 'REGULAR' %}
+                        <span class="badge bg-primary">{{ user.profile.get_account_type_display }}</span>
+                    {% endif %}
+                </h3>
+                <p class="lead mb-4">{{ user.profile.bio }}</p>
+
+                {% if user.profile.account_type != 'REGULAR' %}
+                    <div class="service-provider-stats mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <i class="fas fa-star text-warning"></i>
+                                    <span>{{ user.profile.average_rating|floatformat:1 }} / 5.0</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>{{ user.profile.total_reviews }} Reviews</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-item">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span>Member since {{ user.date_joined|date:"M Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="service-provider-stats mb-4">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <i class="fas fa-map-marker-alt fa-fw"></i>
+                                <span>{{ user.profile.location }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <i class="fas fa-phone fa-fw"></i>
+                                <span>{{ user.profile.phone_number }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if user == request.user %}
+            <div class="action-buttons mt-4">
+                <a href="{% url 'profiles:edit_profile' %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Profile
+                </a>
+                {% if user.profile.account_type == 'REGULAR' %}
+                    <a href="{% url 'profiles:add_vehicle' %}" class="btn btn-success">
+                        <i class="fas fa-car me-2"></i>Become a Taxi/Delivery Service Provider
+                    </a>
+                {% else %}
+                    <a href="{% url 'profiles:add_vehicle' %}" class="btn btn-info">
+                        <i class="fas fa-car me-2"></i>Add Vehicle
+                    </a>
+                    <a href="{% url 'profiles:add_permit' %}" class="btn btn-info">
+                        <i class="fas fa-file-alt me-2"></i>Add Permit
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Identity Verification Section -->
+    {% if identity_documents %}
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-user-check me-2"></i>Identity Verification
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="identity-verification-section mb-4">
+                <div class="row">
+                    {% for field, label, icon, status, reason in identity_documents %}
+                        <div class="col-md-4 mb-3">
+                            <div class="document-status text-center">
+                                <i class="fas fa-{{ icon }} fa-2x mb-2 text-primary"></i>
+                                <h6>{{ label }}</h6>
+                                {% if status == 'APPROVED' %}
+                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Approved</span>
+                                {% elif status == 'PENDING' %}
+                                    <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pending Review</span>
+                                {% elif status == 'REJECTED' %}
+                                    <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Rejected</span>
+                                    {% if reason %}
+                                        <small class="text-danger d-block mt-1" data-bs-toggle="tooltip" title="{{ reason }}">Reason: {{ reason|truncatechars:50 }}</small>
+                                        <button class="btn btn-sm btn-warning mt-2" data-bs-toggle="modal" 
+                                                data-bs-target="#documentUploadModal" 
+                                                data-field="{{ field }}" data-label="{{ label }}" data-doc-type="{{ field|upper }}" data-action="reupload">Re-upload</button>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="fas fa-upload me-1"></i>Not Uploaded</span>
+                                    <button class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" 
+                                            data-bs-target="#documentUploadModal" 
+                                            data-field="{{ field }}" data-label="{{ label }}" data-doc-type="{{ field|upper }}" data-action="upload">Upload</button>
+                                {% endif %}
+                                
+                                {% if status == 'APPROVED' or status == 'PENDING' %}
+                                    <button class="btn btn-sm btn-outline-secondary mt-2" data-bs-toggle="modal" 
+                                            data-bs-target="#documentUploadModal" 
+                                            data-field="{{ field }}" data-label="{{ label }}" data-doc-type="{{ field|upper }}" data-action="replace">Replace</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Document Upload Modal (for identity documents using new DocumentReview system) -->
+    <div class="modal fade" id="documentUploadModal" tabindex="-1" aria-labelledby="documentUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="documentUploadModalLabel">Upload Document</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="documentUploadForm" method="post" action="" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <!-- Regular file upload for non-face_photo documents -->
+                        <div class="mb-3" id="regular-file-upload">
+                            <label for="document_file" class="form-label">Select Document (JPG, PNG, or PDF)</label>
+                            <input type="file" class="form-control" id="document_file" name="document_file" accept="image/jpeg,image/png,application/pdf" required>
+                            <img id="file_preview" class="img-fluid mt-2" style="display: none; max-height: 200px;">
+                            <embed id="file_preview_pdf" class="mt-2" style="display: none; width: 100%; height: 200px;" type="application/pdf">
+                        </div>
+                        
+                        <!-- Face photo upload interface for face_photo -->
+                        <div id="face-photo-interface" style="display: none;">
+                            <!-- Upload method selection -->
+                            <div class="mb-4 text-center">
+                                <div class="btn-group" role="group" aria-label="Upload method">
+                                    <button type="button" id="webcam-mode-btn" class="btn btn-outline-primary active">
+                                        <i class="fas fa-camera me-1"></i>Capture from Webcam
+                                    </button>
+                                    <button type="button" id="upload-mode-btn" class="btn btn-outline-primary">
+                                        <i class="fas fa-upload me-1"></i>Upload from Device
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Webcam capture mode -->
+                            <div id="webcam-capture-mode">
+                                <div class="text-center mb-3">
+                                    <div class="media-container position-relative d-inline-block">
+                                        <video id="camera-stream" autoplay playsinline style="width: 100%; max-width: 400px; border-radius: 8px; border: 2px solid #dee2e6;"></video>
+                                        <canvas id="snapshot-canvas" style="display: none;"></canvas>
+                                        <img id="captured-preview" style="display: none; width: 100%; max-width: 400px; border-radius: 8px; border: 2px solid #28a745;">
+                                        
+                                        <!-- Reusable face positioning overlay -->
+                                        <div id="face-overlay" class="face-overlay" style="
+                                            position: absolute;
+                                            top: 50%;
+                                            left: 50%;
+                                            transform: translate(-50%, -50%);
+                                            width: 200px;
+                                            height: 240px;
+                                            border: 3px solid #007bff;
+                                            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                                            background: rgba(0, 123, 255, 0.1);
+                                            pointer-events: none;
+                                            z-index: 10;
+                                        ">
+                                            <div class="face-guide-text" style="
+                                                position: absolute;
+                                                bottom: -40px;
+                                                left: 50%;
+                                                transform: translateX(-50%);
+                                                color: #007bff;
+                                                font-size: 12px;
+                                                font-weight: bold;
+                                                text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+                                                white-space: nowrap;
+                                                background: rgba(255,255,255,0.9);
+                                                padding: 2px 8px;
+                                                border-radius: 4px;
+                                            ">Position your face here</div>
+                                        </div>
+                                        
+                                        <!-- Darkening overlay for webcam mode only -->
+                                        <div id="darkening-overlay" style="
+                                            position: absolute;
+                                            top: 0;
+                                            left: 0;
+                                            right: 0;
+                                            bottom: 0;
+                                            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+                                            pointer-events: none;
+                                            z-index: 5;
+                                        "></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center mb-3">
+                                    <button type="button" id="capture-btn" class="btn btn-primary me-2">
+                                        <i class="fas fa-camera me-1"></i>Capture Photo
+                                    </button>
+                                    <button type="button" id="retake-btn" class="btn btn-warning me-2" style="display: none;">
+                                        <i class="fas fa-redo me-1"></i>Retake Photo
+                                    </button>
+                                </div>
+                                
+                                <div class="alert alert-info text-center" id="camera-instructions">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Please allow camera access and position your face clearly in the frame.
+                                </div>
+                                
+                                <div class="alert alert-warning text-center" id="camera-error" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <span id="camera-error-message">Unable to access camera. Please check permissions.</span>
+                                </div>
+                            </div>
+                            
+                            <!-- File upload mode -->
+                            <div id="file-upload-mode" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="face-photo-file" class="form-label">Select Face Photo (JPG or PNG)</label>
+                                    <input type="file" class="form-control" id="face-photo-file" name="document_file" accept="image/jpeg,image/png" required>
+                                </div>
+                                
+                                <div class="text-center mb-3">
+                                    <div class="file-preview-container" style="display: none;">
+                                        <img id="file-preview" style="width: 100%; max-width: 400px; border-radius: 8px; border: 2px solid #28a745;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" name="doc_type" id="doc_type_field">
+                        <input type="hidden" name="face_photo_data" id="face_photo_data">
+                        <div class="error-message alert alert-danger" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="saveDocument" form="documentUploadForm" class="btn btn-primary">Upload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registered Vehicles -->
+    {% if vehicles or user.profile.account_type != 'REGULAR' %}
+    <div class="card mt-6 shadow-lg">
+        <div class="card-header bg-primary text-white py-4">
+            <h5 class="mb-0 text-xl font-semibold">
+                <i class="fas fa-car me-2"></i>Registered Vehicles
+            </h5>
+        </div>
+        <div class="card-body p-6">
+            <div class="vehicles-section mb-6">
+                {% if vehicles %}
+                    <div class="row">
+                        {% for vehicle in vehicles %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="vehicle-card h-100 shadow-sm">
+                                    <div class="card-body p-5">
+                                        <h6 class="card-title text-lg font-bold text-gray-900">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h6>
+                                        <p class="card-text mb-2 text-sm">
+                                            <span class="text-gray-600 font-medium">License Plate:</span> {{ vehicle.license_plate }}
+                                        </p>
+                                        <p class="card-text mb-2 text-sm">
+                                            <span class="text-gray-600 font-medium">Type:</span> {{ vehicle.get_vehicle_type_display }}
+                                        </p>
+                                        <p class="card-text mb-2 text-sm">
+                                            <span class="text-gray-600 font-medium">Operator:</span>
+                                            {% if vehicle.operators.count > 0 %}
+                                                {% for operator in vehicle.operators.all %}
+                                                    {% if operator == user %}
+                                                        <span class="badge bg-info text-white ms-2">Owner Operator</span>
+                                                    {% else %}
+                                                        <span class="text-gray-900">{{ operator.get_full_name}}</span>
+                                                    {% endif %}
+                                                    {% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-gray-600">No operator assigned</span>
+                                            {% endif %}
+                                        </p>
+                                        <p class="card-text mb-3 text-sm">
+                                            <span class="text-gray-600 font-medium">Status:</span>
+                                            {% if vehicle.is_active %}
+                                                <span class="badge bg-success text-white">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger text-white">Inactive</span>
+                                            {% endif %}
+                                            {% if vehicle.is_verified %}
+                                                <span class="badge bg-success text-white ms-2">Verified</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark ms-2">Not Verified</span>
+                                            {% endif %}
+                                        </p>
+                                        {% if vehicle.next_inspection_date and vehicle.last_inspection_date and vehicle.next_inspection_date < today %}
+                                            <div class="alert alert-danger mb-3 py-2">
+                                                <small class="text-danger">Inspection overdue since {{ vehicle.next_inspection_date|date:"M d, Y" }}</small>
+                                            </div>
+                                        {% elif vehicle.next_inspection_date %}
+                                            <div class="alert alert-info mb-3 py-2">
+                                                <small class="text-info">Next inspection due: {{ vehicle.next_inspection_date|date:"M d, Y" }}</small>
+                                            </div>
+                                        {% endif %}
+                                        <div class="vehicle-documents mt-4">
+                                            <div class="document-toggle font-semibold" data-bs-toggle="collapse" data-bs-target="#docs-{{ vehicle.id }}" aria-expanded="false" aria-controls="docs-{{ vehicle.id }}">
+                                                <i class="fas fa-folder-open me-1"></i>View Documents
+                                            </div>
+                                            <div class="collapse mt-3" id="docs-{{ vehicle.id }}">
+                                                {% with doc=vehicle.documents.first %}
+                                                    {% if doc %}
+                                                        <ul class="list-unstyled text-sm">
+                                                            <li class="mb-2">
+                                                                <span class="font-medium text-gray-700">Driver's License:</span>
+                                                                {% if doc.drivers_license_verified %}
+                                                                    <span class="badge bg-success text-white ms-2">Verified</span>
+                                                                {% elif doc.drivers_license %}
+                                                                    <span class="badge bg-warning text-dark ms-2">Pending</span>
+                                                                    {% if doc.drivers_license_rejection_reason %}
+                                                                        <small class="text-danger ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ doc.drivers_license_rejection_reason }}">Rejection Reason</small>
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    <span class="badge bg-danger text-white ms-2">Missing</span>
+                                                                {% endif %}
+                                                            </li>
+                                                            <li class="mb-2">
+                                                                <span class="font-medium text-gray-700">Registration Certificate (Blue Book):</span>
+                                                                {% if doc.blue_book %}
+                                                                    {% if doc.blue_book_verified %}
+                                                                        <span class="badge bg-success text-white ms-2">Verified</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-warning text-dark ms-2">Pending</span>
+                                                                        {% if doc.blue_book_rejection_reason %}
+                                                                            <small class="text-danger ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ doc.blue_book_rejection_reason }}">Rejection Reason</small>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    <span class="badge bg-danger text-white ms-2">Missing</span>
+                                                                {% endif %}
+                                                            </li>
+                                                            <li class="mb-2">
+                                                                <span class="font-medium text-gray-700">Roadworthiness Certificate:</span>
+                                                                {% if doc.inspection_certificate %}
+                                                                    {% if doc.inspection_certificate_verified %}
+                                                                        <span class="badge bg-success text-white ms-2">Verified</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-warning text-dark ms-2">Pending</span>
+                                                                        {% if doc.inspection_certificate_rejection_reason %}
+                                                                            <small class="text-danger ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ doc.inspection_certificate_rejection_reason }}">Rejection Reason</small>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    <span class="badge bg-danger text-white ms-2">Missing</span>
+                                                                {% endif %}
+                                                            </li>
+                                                            <li class="mb-2">
+                                                                <span class="font-medium text-gray-700">Insurance:</span>
+                                                                {% if doc.insurance %}
+                                                                    {% if doc.insurance_verified %}
+                                                                        <span class="badge bg-success text-white ms-2">Verified</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-warning text-dark ms-2">Pending</span>
+                                                                        {% if doc.insurance_rejection_reason %}
+                                                                            <small class="text-danger ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ doc.insurance_rejection_reason }}">Rejection Reason</small>
+                                                                        {% endif %}
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    <span class="badge bg-danger text-white ms-2">Missing</span>
+                                                                {% endif %}
+                                                            </li>
+                                                        </ul>
+                                                        <a href="{% url 'profiles:edit_vehicle_document' vehicle.id doc.id %}" class="btn btn-sm btn-outline-primary mt-3 hover:bg-blue-600 hover:text-white transition-colors duration-300">Edit Documents</a>
+                                                    {% else %}
+                                                        <p class="text-gray-600 text-sm">No documents uploaded.</p>
+                                                        <a href="{% url 'profiles:edit_vehicle_document' vehicle.id 0 %}" class="btn btn-sm btn-primary mt-3 hover:bg-blue-700 transition-colors duration-300">Add Documents</a>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            </div>
+                                        </div>
+                                        {% if vehicle %}
+                                            <a href="{% url 'profiles:edit_vehicle' vehicle.id %}" class="btn btn-sm btn-primary mt-3 hover:bg-blue-700 transition-colors duration-300">Edit Vehicle</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info rounded-lg p-4">
+                        <i class="fas fa-info-circle me-2"></i>No vehicles registered yet.
+                        <a href="{% url 'profiles:add_vehicle' %}" class="alert-link text-blue-600 hover:underline">Add a vehicle</a>
+                    </div>
+                {% endif %}
+            </div>
+            <a href="{% url 'profiles:add_vehicle' %}" class="btn btn-primary mt-4 px-6 py-2 text-white hover:bg-blue-700 transition-colors duration-300">
+                <i class="fas fa-plus me-2"></i>Add Vehicle
+            </a>
+        </div>
+    </div>
+    
+    <!-- Registered Permits -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-file-alt me-2"></i>Registered Government Permits
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="permits-section mb-4">
+                {% if permits %}
+                    <div class="row">
+                        {% for permit in permits %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ permit.permit_type }} - {{ permit.permit_number }}</h6>
+                                        <p class="card-text mb-1">
+                                            <small class="text-muted">Issue Date:</small> {{ permit.issue_date|date:"M d, Y" }}
+                                        </p>
+                                        <p class="card-text mb-1">
+                                            <small class="text-muted">Expiry Date:</small> {{ permit.expiry_date|date:"M d, Y" }}
+                                        </p>
+                                        <p class="card-text mb-2">
+                                            <small class="text-muted">Status:</small>
+                                            {% if permit.is_verified %}
+                                                <span class="badge bg-success">Verified</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                                {% if permit.rejection_reason %}
+                                                    <small class="text-danger ms-1" data-bs-toggle="tooltip" title="{{ permit.rejection_reason }}">Rejection Reason</small>
+                                                {% endif %}
+                                            {% endif %}
+                                        </p>
+                                        <div class="permit-documents">
+                                            <h6 class="text-muted mb-2">Document</h6>
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <div>
+                                                    <small>Permit Document:</small>
+                                                    {% if permit.permit_document %}
+                                                        {% if permit.is_verified %}
+                                                            <span class="badge bg-success ms-1">Verified</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning ms-1">Pending</span>
+                                                            {% if permit.rejection_reason %}
+                                                                <small class="text-danger ms-1" data-bs-toggle="tooltip" title="{{ permit.rejection_reason }}">Rejection Reason</small>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-danger ms-1">Missing</span>
+                                                    {% endif %}
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" 
+                                                        data-bs-target="#permitUploadModal" 
+                                                        data-permit-id="{{ permit.id }}" 
+                                                        data-action="edit">Edit</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        No permits registered yet.
+                        <a href="{% url 'profiles:add_permit' %}" class="alert-link">Add a permit</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Operator Documents -->
+    {% if operator_documents or user.profile.account_type != 'REGULAR' %}
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-user-shield me-2"></i>Operator Documents
+            </h5>
+            {% if vehicles %}
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-plus"></i> Add Operator
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% for vehicle in vehicles %}
+                            {% if vehicle.is_verified %}
+                                <li><a class="dropdown-item" href="{% url 'profiles:add_vehicle_operator' vehicle_id=vehicle.id %}">{{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.license_plate }})</a></li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% else %}
+                <span class="text-muted">No verified vehicles available</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="operator-documents-section mb-4">
+                {% if operator_documents %}
+                    <div class="row">
+                        {% for doc in operator_documents %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            {% if doc.user == user %}
+                                                <span class="badge bg-info me-2">You as Operator</span>
+                                            {% else %}
+                                                <span class="badge bg-primary me-2">Your Vehicle's Operator</span>
+                                            {% endif %}
+                                            {{ doc.user.username }} - {{ doc.vehicle.make }} {{ doc.vehicle.model }} ({{ doc.vehicle.license_plate }})
+                                        </h6>
+                                        <p class="card-text mb-2">
+                                            <small class="text-muted">Driver's License:</small>
+                                            {% if doc.drivers_license_verified %}
+                                                <span class="badge bg-success ms-1">Verified</span>
+                                            {% elif doc.drivers_license %}
+                                                <span class="badge bg-warning ms-1">Pending</span>
+                                                {% if doc.drivers_license_rejection_reason %}
+                                                    <small class="text-danger ms-1" data-bs-toggle="tooltip" title="{{ doc.drivers_license_rejection_reason }}">Rejection Reason</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-danger ms-1">Missing</span>
+                                            {% endif %}
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <small>Status:</small>
+                                                {% if doc.drivers_license_verified %}
+                                                    <span class="badge bg-success">Verified</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Pending</span>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" 
+                                                        data-bs-target="#operatorUploadModal" 
+                                                        data-operator-id="{{ doc.id }}" 
+                                                        data-vehicle-id="{{ doc.vehicle.id }}"
+                                                        data-action="edit">Edit</button>
+                                                <a href="{% url 'profiles:remove_vehicle_operator' vehicle_id=doc.vehicle.id operator_id=doc.user.id %}" class="btn btn-sm btn-outline-danger mt-2 hover:bg-red-600 hover:text-white transition-colors duration-300">Remove</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        No operator documents registered yet.
+                        {% if vehicles %}
+                            Add an operator to a verified vehicle from the dropdown above.
+                        {% else %}
+                            Add a verified vehicle to enable operator management.
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <!-- Operator Document Upload Modal  -->
+    <div class="modal fade" id="operatorUploadModal" tabindex="-1" aria-labelledby="operatorUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="operatorUploadModalLabel">Upload Operator Driver’s License</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="operatorUploadForm" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="operator_document" class="form-label">Select Driver’s License (JPG, PNG, or PDF)</label>
+                            <input type="file" class="form-control" id="operator_document" name="drivers_license" accept="image/jpeg,image/png,application/pdf" required>
+                            <img id="operator_preview" class="img-fluid mt-2" style="display: none; max-height: 200px;">
+                            <embed id="operator_preview_pdf" class="mt-2" style="display: none; width: 100%; height: 200px;" type="application/pdf">
+                        </div>
+                        <input type="hidden" name="operator_id" id="operator_id">
+                        <input type="hidden" name="vehicle_id" id="vehicle_id">
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="saveOperator" form="operatorUploadForm" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permit Upload Modal -->
+    <div class="modal fade" id="permitUploadModal" tabindex="-1" aria-labelledby="permitUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="permitUploadModalLabel">Upload Permit Document</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="permitUploadForm" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="permit_document" class="form-label">Select Permit Document (JPG, PNG, or PDF)</label>
+                            <input type="file" class="form-control" id="permit_document" name="permit_document" accept="image/jpeg,image/png,application/pdf" required>
+                            <img id="permit_preview" class="img-fluid mt-2" style="display: none; max-height: 200px;">
+                            <embed id="permit_preview_pdf" class="mt-2" style="display: none; width: 100%; height: 200px;" type="application/pdf">
+                        </div>
+                        <input type="hidden" name="permit_id" id="permit_id">
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="savePermit" form="permitUploadForm" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Experience Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-briefcase me-2"></i>Experience
+            </h5>
+            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addExperienceModal" title="Add Experience">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            {% if experiences %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for exp in experiences %}
+                        <div class="col">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h4 class="card-title mb-2">{{ exp.title }}</h4>
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-building me-2"></i>{{ exp.company }}
+                                    </h6>
+                                    <p class="meta-info mb-2">
+                                        <i class="fas fa-calendar-alt me-2"></i>
+                                        {{ exp.start_date|date:"M Y" }} - 
+                                        {% if exp.end_date %}{{ exp.end_date|date:"M Y" }}{% else %}Present{% endif %}
+                                    </p>
+                                    <p class="description text-muted" style="max-height: 100px; overflow-y: auto;">{{ exp.description|truncatewords:35 }}</p>
+                                    <div class="action-buttons mt-3">
+                                        <button type="button" class="btn btn-warning btn-sm edit-experience-btn" data-exp-id="{{ exp.id }}" data-bs-toggle="modal" data-bs-target="#editExperienceModal">
+                                            <i class="fas fa-edit me-1"></i>Edit
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-experience-btn" data-exp-id="{{ exp.id }}" data-exp-title="{{ exp.title }}" data-bs-toggle="modal" data-bs-target="#deleteExperienceModal">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-5">No experience added yet. Start by adding your work history!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Education Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-graduation-cap me-2"></i>Education
+            </h5>
+            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addEducationModal" title="Add Education">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            {% if education %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    {% for edu in education %}
+                        <div class="col">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h4 class="card-title mb-2">{{ edu.degree }} in {{ edu.field_of_study }}</h4>
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-university me-2"></i>{{ edu.institution }}
+                                    </h6>
+                                    <p class="meta-info mb-2">
+                                        <i class="fas fa-calendar-alt me-2"></i>
+                                        {{ edu.start_date|date:"M Y" }} - 
+                                        {% if edu.current %}Present{% else %}{{ edu.end_date|date:"M Y" }}{% endif %}
+                                    </p>
+                                    {% if edu.description %}
+                                        <p class="description text-muted" style="max-height: 100px; overflow-y: auto;">{{ edu.description|truncatewords:35 }}</p>
+                                    {% endif %}
+                                    <div class="action-buttons mt-3">
+                                        <button type="button" class="btn btn-warning btn-sm edit-education-btn" data-edu-id="{{ edu.id }}" data-bs-toggle="modal" data-bs-target="#editEducationModal">
+                                            <i class="fas fa-edit me-1"></i>Edit
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteEducationModal" data-edu-id="{{ edu.id }}" data-edu-title="{{ edu.degree }}">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-5">No education added yet. Add your academic achievements!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Portfolio Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-briefcase me-2"></i>Portfolio
+            </h5>
+            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addPortfolioModal" title="Add Portfolio">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            {% if portfolio %}
+                <div class="row">
+                    {% for portfolio_item in portfolio %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="portfolio-card card h-100 shadow-sm position-relative">
+                                {% if portfolio_item.image %}
+                                    <img src="{{ portfolio_item.image.url }}" class="card-img-top" alt="{{ portfolio_item.title }} Image" style="height: 200px; object-fit: cover;">
+                                {% else %}
+                                    <div class="card-img-top d-flex align-items-center justify-content-center bg-secondary text-white" style="height: 200px;">
+                                        <i class="fas fa-image fa-3x"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ portfolio_item.title }}</h5>
+                                    <p class="card-text">{{ portfolio_item.description|truncatewords:30 }}</p>
+                                    {% if portfolio_item.role %}
+                                        <p class="portfolio-meta"><i class="fas fa-user-tie"></i> {{ portfolio_item.role }}</p>
+                                    {% endif %}
+                                    {% if portfolio_item.skills %}
+                                        <p class="portfolio-meta"><i class="fas fa-tools"></i> {{ portfolio_item.skills }}</p>
+                                    {% endif %}
+                                    <div class="action-buttons mt-3">
+                                        <button type="button" class="btn btn-primary btn-sm view-portfolio-btn" data-portfolio-id="{{ portfolio_item.id }}" data-bs-toggle="modal" data-bs-target="#viewPortfolioModal">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm edit-portfolio-btn" data-portfolio-id="{{ portfolio_item.id }}" data-bs-toggle="modal" data-bs-target="#editPortfolioModal">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-portfolio-btn" data-portfolio-id="{{ portfolio_item.id }}" data-bs-toggle="modal" data-bs-target="#deletePortfolioModal">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <!-- Pagination Placeholder -->
+                <nav aria-label="Portfolio pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">Next</a></li>
+                    </ul>
+                </nav>
+            {% else %}
+                <p class="text-muted text-center py-5">No portfolio items added yet. Showcase your work by adding a project!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Skills Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-tools me-2"></i>Skills
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if profile_skills %}
+                {% regroup profile_skills by skill.category as skill_categories %}
+                {% for category in skill_categories %}
+                    <div class="skill-category mb-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-folder me-2"></i>{{ category.grouper }}
+                        </h5>
+                        <div class="row">
+                            {% for profile_skill in category.list %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="skill-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ profile_skill.skill.name }}</strong>
+                                            {% if profile_skill.verified %}
+                                                <i class="fas fa-check-circle text-success ms-1"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-primary">{{ profile_skill.get_proficiency_display }}</span>
+                                            <small class="text-muted">({{ profile_skill.years_of_experience }} years)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted text-center py-5">No skills added yet. Add your skills to highlight your expertise!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Referral Section -->
+    <div class="card mt-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-users me-2"></i>Referral Program
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if referral_stats.referral_code %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Your Referral Code</h6>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="referralCode" value="{{ referral_stats.referral_code }}" readonly>
+                            <button class="btn btn-outline-primary" type="button" onclick="copyReferralCode()" title="Copy to clipboard">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button class="btn btn-outline-success" type="button" onclick="shareReferralCode()" title="Share referral">
+                                <i class="fas fa-share"></i> Share
+                            </button>
+                        </div>
+                        <small class="text-muted">Share this code with friends to earn referral rewards!</small>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Referral Statistics</h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-primary mb-1">{{ referral_stats.total_referrals }}</h4>
+                                    <small class="text-muted">Total Referrals</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-success mb-1">{{ referral_stats.referred_users|length }}</h4>
+                                    <small class="text-muted">Active Users</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% if referral_stats.referred_by %}
+                            <div class="mt-3 p-2 bg-info text-white rounded">
+                                <small><i class="fas fa-info-circle me-1"></i>You were referred by: 
+                                <strong>{{ referral_stats.referred_by.get_full_name|default:referral_stats.referred_by.username }}</strong></small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if referral_stats.referred_users %}
+                    <div class="mt-4">
+                        <h6 class="text-muted">Your Referrals</h6>
+                        <div class="row">
+                            {% for referred_user in referral_stats.referred_users|slice:":5" %}
+                                <div class="col-md-3 col-sm-4 col-6 mb-2">
+                                    <div class="d-flex align-items-center p-2 bg-light rounded">
+                                        <i class="fas fa-user-circle fa-2x text-secondary me-2"></i>
+                                        <div>
+                                            <small class="fw-bold">{{ referred_user.get_full_name|default:referred_user.username }}</small>
+                                            <br><small class="text-muted">{{ referred_user.date_joined|date:"M d, Y" }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            {% if referral_stats.referred_users|length > 5 %}
+                                <div class="col-12">
+                                    <small class="text-muted">And {{ referral_stats.referred_users|length|add:"-5" }} more...</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">Referral code is being generated...</h6>
+                    <small class="text-muted">Please refresh the page in a moment.</small>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Add Experience Modal -->
+    <div class="modal fade" id="addExperienceModal" tabindex="-1" aria-labelledby="addExperienceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addExperienceModalLabel">Add Experience</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addExperienceForm" method="post" action="{% url 'profiles:add_experience' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="exp_title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="exp_title" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="exp_company" class="form-label">Company</label>
+                            <input type="text" class="form-control" id="exp_company" name="company" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="exp_location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="exp_location" name="location" placeholder="City, Country">
+                        </div>
+                        <div class="mb-3">
+                            <label for="exp_start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="exp_start_date" name="start_date" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="exp_end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="exp_end_date" name="end_date">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="exp_current" name="current">
+                                <label class="form-check-label" for="exp_current">
+                                    I currently work here
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="exp_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="exp_description" name="description" rows="4"></textarea>
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="addExperienceForm" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Experience Modal -->
+    <div class="modal fade" id="editExperienceModal" tabindex="-1" aria-labelledby="editExperienceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editExperienceModalLabel">Edit Experience</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editExperienceForm" method="post" action="{% url 'profiles:update_experience' %}">
+                        {% csrf_token %}
+                        <input type="hidden" id="edit_exp_id" name="id">
+                        <div class="mb-3">
+                            <label for="edit_exp_title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="edit_exp_title" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_exp_company" class="form-label">Company</label>
+                            <input type="text" class="form-control" id="edit_exp_company" name="company" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_exp_location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="edit_exp_location" name="location" placeholder="City, Country">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_exp_start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="edit_exp_start_date" name="start_date" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_exp_end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="edit_exp_end_date" name="end_date">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_exp_current" name="current">
+                                <label class="form-check-label" for="edit_exp_current">
+                                    I currently work here
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_exp_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="edit_exp_description" name="description" rows="4"></textarea>
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="editExperienceForm" class="btn btn-primary">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Experience Modal -->
+    <div class="modal fade" id="deleteExperienceModal" tabindex="-1" aria-labelledby="deleteExperienceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteExperienceModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the experience: <span id="exp-title"></span>?</p>
+                    <form id="deleteExperienceForm" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="experience_id" id="exp_id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="deleteExperienceForm" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Education Modal -->
+    <div class="modal fade" id="addEducationModal" tabindex="-1" aria-labelledby="addEducationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addEducationModalLabel">Add Education</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addEducationForm" method="post" action="{% url 'profiles:add_education' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="edu_degree" class="form-label">Degree</label>
+                            <input type="text" class="form-control" id="edu_degree" name="degree" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edu_field_of_study" class="form-label">Field of Study</label>
+                            <input type="text" class="form-control" id="edu_field_of_study" name="field_of_study" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edu_institution" class="form-label">Institution</label>
+                            <input type="text" class="form-control" id="edu_institution" name="institution" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label for="edu_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="edu_start_date" name="start_date" required>
+                            </div>
+                            <div class="col">
+                                <label for="edu_end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="edu_end_date" name="end_date">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edu_current" name="current">
+                                <label class="form-check-label" for="edu_current">
+                                    I am currently studying here
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edu_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="edu_description" name="description" rows="4"></textarea>
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="addEducationForm" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Education Modal -->
+    <div class="modal fade" id="deleteEducationModal" tabindex="-1" aria-labelledby="deleteEducationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteEducationModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the education: <span id="edu-title"></span>?</p>
+                    <form id="deleteEducationForm" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="education_id" id="edu_id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="deleteEducationForm" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Education Modal -->
+    <div class="modal fade" id="editEducationModal" tabindex="-1" aria-labelledby="editEducationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editEducationModalLabel">Edit Education</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editEducationForm" method="post" action="{% url 'profiles:update_education' %}">
+                        {% csrf_token %}
+                        <input type="hidden" id="edit_edu_id" name="id">
+                        <div class="mb-3">
+                            <label for="edit_edu_degree" class="form-label">Degree</label>
+                            <input type="text" class="form-control" id="edit_edu_degree" name="degree" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_edu_field_of_study" class="form-label">Field of Study</label>
+                            <input type="text" class="form-control" id="edit_edu_field_of_study" name="field_of_study" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_edu_institution" class="form-label">Institution</label>
+                            <input type="text" class="form-control" id="edit_edu_institution" name="institution" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col">
+                                <label for="edit_edu_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="edit_edu_start_date" name="start_date" required>
+                            </div>
+                            <div class="col">
+                                <label for="edit_edu_end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="edit_edu_end_date" name="end_date">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_edu_current" name="current">
+                                <label class="form-check-label" for="edit_edu_current">
+                                    I am currently studying here
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_edu_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="edit_edu_description" name="description" rows="4"></textarea>
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="editEducationForm" class="btn btn-primary">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Portfolio Modal -->
+    <div class="modal fade" id="addPortfolioModal" tabindex="-1" aria-labelledby="addPortfolioModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addPortfolioModalLabel">Add Portfolio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addPortfolioForm" method="post" enctype="multipart/form-data" action="{% url 'profiles:add_portfolio' %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="portfolio_title" class="form-label">Title</label>
+                                    <input type="text" class="form-control" id="portfolio_title" name="title" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="portfolio_description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="portfolio_description" name="description" rows="4" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="portfolio_role" class="form-label">Role</label>
+                                    <input type="text" class="form-control" id="portfolio_role" name="role">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="portfolio_skills" class="form-label">Skills Used</label>
+                                    <input type="text" class="form-control" id="portfolio_skills" name="skills" placeholder="e.g., Python, Django, JavaScript">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="portfolio_related_job" class="form-label">Related Job</label>
+                                    <input type="text" class="form-control" id="portfolio_related_job" name="related_job">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="completion_date" class="form-label">Completion Date</label>
+                                    <input type="date" class="form-control" id="completion_date" name="completion_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="sample_image" class="form-label">Image</label>
+                                    <input type="file" class="form-control" id="sample_image" name="image" accept="image/*">
+                                    <img id="image_preview" class="img-fluid mt-2" style="display: none; max-height: 150px;">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sample_video" class="form-label">Video</label>
+                                    <input type="file" class="form-control" id="sample_video" name="video" accept="video/*">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sample_audio" class="form-label">Audio</label>
+                                    <input type="file" class="form-control" id="sample_audio" name="audio" accept="audio/*">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sample_pdf" class="form-label">PDF</label>
+                                    <input type="file" class="form-control" id="sample_pdf" name="pdf" accept=".pdf">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sample_url" class="form-label">URL</label>
+                                    <input type="url" class="form-control" id="sample_url" name="url" placeholder="https://example.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sample_text_block" class="form-label">Project Notes</label>
+                                    <textarea class="form-control" id="sample_text_block" name="text_block" rows="4"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="addPortfolioForm" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Portfolio Modal -->
+    <div class="modal fade" id="editPortfolioModal" tabindex="-1" aria-labelledby="editPortfolioModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="editPortfolioModalLabel">Edit Portfolio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPortfolioForm" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" id="edit_portfolio_id" name="portfolio_id">
+                        <div id="edit-portfolio-content">
+                            <!-- Dynamic content loaded via JS -->
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="editPortfolioForm" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Portfolio Modal -->
+    <div class="modal fade" id="viewPortfolioModal" tabindex="-1" aria-labelledby="viewPortfolioModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="viewPortfolioModalLabel">View Portfolio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="view-portfolio-content">
+                        <!-- Dynamic content loaded via JS -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Portfolio Modal -->
+    <div class="modal fade" id="deletePortfolioModal" tabindex="-1" aria-labelledby="deletePortfolioModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deletePortfolioModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the portfolio item: <span id="portfolio-title"></span>?</p>
+                    <form id="deletePortfolioForm" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="portfolio_id" id="portfolio_id">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="deletePortfolioForm" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+    // CSRF token helper - now uses the global CSRF manager
+    function getCookie(name) {
+        // Use the global CSRF manager for csrftoken
+        if (name === 'csrftoken') {
+            return window.csrfManager ? window.csrfManager.getCookieToken() : null;
+        }
+        // Fallback for other cookies
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Show error message
+    function showError(form, message) {
+        const errorDiv = form.querySelector('.error-message');
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    }
+
+    // Clear error message
+    function clearError(form) {
+        const errorDiv = form.querySelector('.error-message');
+        if (errorDiv) {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+        }
+    }
+
+    // Handle form submissions
+    function handleFormSubmit(formId, url, successMessage) {
+        console.log('Setting up handleFormSubmit for:', formId, 'URL:', url);
+        const form = document.getElementById(formId);
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                console.log('Form submission triggered for:', formId);
+                clearError(form);
+                const formData = new FormData(this);
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Processing...';
+                }
+                fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => {
+                    if (response.status === 401) {
+                        throw new Error('User not authenticated. Please log in.');
+                    }
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Upload response:', data);
+                    if (data.ok) {
+                        console.log('Upload successful, showing message and reloading');
+                        const messagesDiv = document.getElementById('messages') || document.createElement('div');
+                        messagesDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                            ${successMessage}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>`;
+                        const container = document.querySelector('.container.mt-4');
+                        if (container) {
+                            container.prepend(messagesDiv);
+                        }
+                        const modal = form.closest('.modal');
+                        if (modal) {
+                            bootstrap.Modal.getInstance(modal).hide();
+                        }
+                        // Give a small delay to ensure modal closes before reload
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
+                    } else {
+                        console.log('Upload failed:', data);
+                        const errorMessage = data.error || (data.errors ? 
+                            (Array.isArray(data.errors) ? 
+                                data.errors.map(err => err.message || err).join(', ') : 
+                                Object.values(data.errors).flat().join(', ')) : 
+                            'Submission failed.');
+                        showError(form, errorMessage);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showError(form, error.message || 'An error occurred during submission. Please try again.');
+                })
+                .finally(() => {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        // Reset button text appropriately
+                        if (formId.includes('edit')) {
+                            submitButton.textContent = 'Update';
+                        } else if (formId.includes('delete')) {
+                            submitButton.textContent = 'Delete';
+                        } else if (formId.includes('Upload')) {
+                            submitButton.textContent = 'Upload';
+                        } else {
+                            submitButton.textContent = 'Save';
+                        }
+                    }
+                });
+            });
+        }
+    }
+
+    // Note: fileUploadModal handler removed - all documents now use documentUploadModal
+
+    // Permit Upload Modal
+    document.querySelectorAll('[data-bs-target="#permitUploadModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const permitId = this.dataset.permitId;
+            const action = this.dataset.action || 'upload';
+            const modal = document.getElementById('permitUploadModal');
+            const title = modal.querySelector('#permitUploadModalLabel');
+            const form = modal.querySelector('#permitUploadForm');
+            const fileInput = modal.querySelector('#permit_document');
+            const filePreview = modal.querySelector('#permit_preview');
+            const filePreviewPdf = modal.querySelector('#permit_preview_pdf');
+            const saveButton = modal.querySelector('#savePermit');
+            const permitIdField = modal.querySelector('#permit_id');
+            const actionUrl = `{% url 'profiles:edit_permit_document' permit_id=0 %}`.replace('0', permitId);
+
+            title.textContent = `${action === 'edit' ? 'Edit' : 'Upload'} Permit Document`;
+            permitIdField.value = permitId;
+            form.action = actionUrl;
+            fileInput.value = ''; // Clear file input
+            filePreview.style.display = 'none';
+            filePreview.src = '';
+            filePreviewPdf.style.display = 'none';
+            filePreviewPdf.src = '';
+            clearError(form);
+
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            filePreview.src = e.target.result;
+                            filePreview.style.display = 'block';
+                            filePreviewPdf.style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                    } else if (file.type === 'application/pdf') {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            filePreviewPdf.src = e.target.result;
+                            filePreviewPdf.style.display = 'block';
+                            filePreview.style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                } else {
+                    showError(form, 'Please select a valid JPG, PNG, or PDF file.');
+                }
+            });
+
+            handleFormSubmit('permitUploadForm', actionUrl, `Permit document ${action === 'edit' ? 'updated' : 'uploaded'} successfully!`);
+        });
+    });
+    
+    // Global webcam variables
+    let currentStream = null;
+    let capturedImageData = null;
+    
+    // Webcam functions
+    function initializeWebcam() {
+        const video = document.getElementById('camera-stream');
+        const errorDiv = document.getElementById('camera-error');
+        const errorMessage = document.getElementById('camera-error-message');
+        const instructions = document.getElementById('camera-instructions');
+        
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { ideal: 640 }, 
+                height: { ideal: 480 },
+                facingMode: 'user' 
+            } 
+        })
+        .then(stream => {
+            currentStream = stream;
+            video.srcObject = stream;
+            errorDiv.style.display = 'none';
+            instructions.style.display = 'block';
+        })
+        .catch(err => {
+            console.error('Camera access error:', err);
+            instructions.style.display = 'none';
+            errorDiv.style.display = 'block';
+            if (err.name === 'NotAllowedError') {
+                errorMessage.textContent = 'Camera access denied. Please allow camera access and refresh the page.';
+            } else if (err.name === 'NotFoundError') {
+                errorMessage.textContent = 'No camera found. Please ensure your device has a camera.';
+            } else {
+                errorMessage.textContent = 'Unable to access camera: ' + err.message;
+            }
+        });
+    }
+    
+    function stopWebcam() {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+    }
+    
+    function capturePhoto() {
+        const video = document.getElementById('camera-stream');
+        const canvas = document.getElementById('snapshot-canvas');
+        const preview = document.getElementById('captured-preview');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const hiddenField = document.getElementById('face_photo_data');
+        
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the video frame to canvas
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to base64 data URL
+        capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+        hiddenField.value = capturedImageData;
+        
+        // Show preview
+        preview.src = capturedImageData;
+        preview.style.display = 'block';
+        video.style.display = 'none';
+        
+        // Update buttons
+        captureBtn.style.display = 'none';
+        retakeBtn.style.display = 'inline-block';
+        
+        // Update upload button state
+        const saveButton = document.getElementById('saveDocument');
+        saveButton.disabled = false;
+        saveButton.textContent = 'Upload Photo';
+    }
+    
+    function retakePhoto() {
+        const video = document.getElementById('camera-stream');
+        const preview = document.getElementById('captured-preview');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const hiddenField = document.getElementById('face_photo_data');
+        const overlay = document.getElementById('face-overlay');
+        const darkening = document.getElementById('darkening-overlay');
+        
+        // Clear captured data
+        capturedImageData = null;
+        hiddenField.value = '';
+        
+        // Show video, hide preview
+        video.style.display = 'block';
+        preview.style.display = 'none';
+        
+        // Show darkening overlay for webcam mode
+        darkening.style.display = 'block';
+        
+        // Update overlay for live video (blue styling)
+        overlay.style.border = '3px solid #007bff';
+        overlay.style.background = 'rgba(0, 123, 255, 0.1)';
+        overlay.querySelector('.face-guide-text').style.color = '#007bff';
+        overlay.querySelector('.face-guide-text').textContent = 'Position your face here';
+        
+        // Update buttons
+        captureBtn.style.display = 'inline-block';
+        retakeBtn.style.display = 'none';
+        
+        // Update upload button state
+        const saveButton = document.getElementById('saveDocument');
+        saveButton.disabled = true;
+        saveButton.textContent = 'Capture Photo First';
+    }
+    
+    // New function to initialize face photo dual interface
+    function initializeFacePhotoInterface() {
+        const webcamModeBtn = document.getElementById('webcam-mode-btn');
+        const uploadModeBtn = document.getElementById('upload-mode-btn');
+        const webcamMode = document.getElementById('webcam-capture-mode');
+        const fileMode = document.getElementById('file-upload-mode');
+        const facePhotoFile = document.getElementById('face-photo-file');
+        const filePreview = document.getElementById('file-preview');
+        const saveButton = document.getElementById('saveDocument');
+        
+        // Mode switching
+        webcamModeBtn.addEventListener('click', function() {
+            webcamModeBtn.classList.add('active');
+            uploadModeBtn.classList.remove('active');
+            webcamMode.style.display = 'block';
+            fileMode.style.display = 'none';
+            
+            // Reset states
+            resetWebcamState();
+            resetFileState();
+            
+            // Initialize webcam
+            setTimeout(() => {
+                initializeWebcam();
+                setupWebcamControls();
+            }, 100);
+            
+            saveButton.disabled = true;
+            saveButton.textContent = 'Capture Photo First';
+        });
+        
+        uploadModeBtn.addEventListener('click', function() {
+            console.log('Switching to upload mode');
+            uploadModeBtn.classList.add('active');
+            webcamModeBtn.classList.remove('active');
+            fileMode.style.display = 'block';
+            webcamMode.style.display = 'none';
+            
+            // Stop webcam and reset states
+            stopWebcam();
+            resetWebcamState();
+            resetFileState();
+            
+            // Ensure file input is properly enabled
+            const fileInput = document.getElementById('face-photo-file');
+            if (fileInput) {
+                fileInput.disabled = false;
+                fileInput.style.pointerEvents = 'auto';
+                fileInput.style.display = 'block';
+                console.log('File input enabled and visible');
+            }
+            
+            saveButton.disabled = true;
+            saveButton.textContent = 'Select File First';
+        });
+        
+        // File input handler - ensure it's properly wired
+        if (facePhotoFile) {
+            // Remove any existing event listeners
+            const newFileInput = facePhotoFile.cloneNode(true);
+            facePhotoFile.parentNode.replaceChild(newFileInput, facePhotoFile);
+            
+            // Get the new file input reference
+            const actualFileInput = document.getElementById('face-photo-file');
+            
+            actualFileInput.addEventListener('change', function() {
+                console.log('File input changed:', this.files);
+                const file = this.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    console.log('Valid image file selected:', file.name);
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        filePreview.src = e.target.result;
+                        document.querySelector('.file-preview-container').style.display = 'block';
+                        
+                        saveButton.disabled = false;
+                        saveButton.textContent = 'Upload Photo';
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    console.log('Invalid file type or no file selected');
+                    showError(document.getElementById('documentUploadForm'), 'Please select a valid JPG or PNG image.');
+                }
+            });
+            
+            // Also add click handler to ensure file picker opens
+            actualFileInput.addEventListener('click', function(e) {
+                console.log('File input clicked');
+                // Ensure the input is properly enabled and visible
+                this.disabled = false;
+                this.style.pointerEvents = 'auto';
+            });
+        }
+        
+        // Start with webcam mode by default
+        setTimeout(() => {
+            initializeWebcam();
+            setupWebcamControls();
+        }, 100);
+    }
+    
+    function resetWebcamState() {
+        const video = document.getElementById('camera-stream');
+        const preview = document.getElementById('captured-preview');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const hiddenField = document.getElementById('face_photo_data');
+        const darkening = document.getElementById('darkening-overlay');
+        
+        capturedImageData = null;
+        if (hiddenField) hiddenField.value = '';
+        
+        video.style.display = 'block';
+        preview.style.display = 'none';
+        captureBtn.style.display = 'inline-block';
+        retakeBtn.style.display = 'none';
+        darkening.style.display = 'block';
+    }
+    
+    function resetFileState() {
+        const fileInput = document.getElementById('face-photo-file');
+        const filePreview = document.getElementById('file-preview');
+        const container = document.querySelector('.file-preview-container');
+        
+        if (fileInput) fileInput.value = '';
+        if (filePreview) filePreview.src = '';
+        if (container) container.style.display = 'none';
+    }
+    
+    function setupWebcamControls() {
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        
+        // Remove existing listeners
+        const newCaptureBtn = captureBtn.cloneNode(true);
+        const newRetakeBtn = retakeBtn.cloneNode(true);
+        captureBtn.parentNode.replaceChild(newCaptureBtn, captureBtn);
+        retakeBtn.parentNode.replaceChild(newRetakeBtn, retakeBtn);
+        
+        // Add new listeners
+        newCaptureBtn.addEventListener('click', capturePhotoWithOverlay);
+        newRetakeBtn.addEventListener('click', retakePhoto);
+    }
+    
+    function capturePhotoWithOverlay() {
+        const video = document.getElementById('camera-stream');
+        const canvas = document.getElementById('snapshot-canvas');
+        const preview = document.getElementById('captured-preview');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const hiddenField = document.getElementById('face_photo_data');
+        const overlay = document.getElementById('face-overlay');
+        const darkening = document.getElementById('darkening-overlay');
+        
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the video frame to canvas
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to base64 data URL
+        capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+        hiddenField.value = capturedImageData;
+        
+        // Show preview
+        preview.src = capturedImageData;
+        preview.style.display = 'block';
+        video.style.display = 'none';
+        
+        // Hide darkening overlay for captured photo
+        darkening.style.display = 'none';
+        
+        // Update overlay for captured photo (green styling)
+        overlay.style.border = '3px solid #28a745';
+        overlay.style.background = 'rgba(40, 167, 69, 0.1)';
+        overlay.querySelector('.face-guide-text').style.color = '#28a745';
+        overlay.querySelector('.face-guide-text').textContent = 'Photo captured!';
+        
+        // Update buttons
+        captureBtn.style.display = 'none';
+        retakeBtn.style.display = 'inline-block';
+        
+        // Update upload button state
+        const saveButton = document.getElementById('saveDocument');
+        saveButton.disabled = false;
+        saveButton.textContent = 'Upload Photo';
+    }
+    
+    // Setup form submission for face photo dual mode
+    function setupFacePhotoFormSubmission(actionUrl, label, action) {
+        const form = document.getElementById('documentUploadForm');
+        const saveButton = document.getElementById('saveDocument');
+        
+        // Create a custom submit handler function
+        const submitHandler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Face photo form submission triggered');
+            clearError(form);
+            
+            // Determine which mode we're in
+            const webcamMode = document.getElementById('webcam-capture-mode');
+            const fileMode = document.getElementById('file-upload-mode');
+            const isWebcamMode = webcamMode && webcamMode.style.display !== 'none';
+            
+            console.log('Upload mode:', isWebcamMode ? 'webcam' : 'device');
+            
+            const formData = new FormData();
+            
+            // Get CSRF token from the form or cookie
+            const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+            const docType = document.getElementById('doc_type_field').value;
+            
+            if (!csrfToken) {
+                showError(form, 'CSRF token not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            formData.append('doc_type', docType);
+            
+            if (isWebcamMode) {
+                // Webcam mode - send base64 data
+                const facePhotoData = document.getElementById('face_photo_data').value;
+                if (!facePhotoData) {
+                    showError(form, 'No photo captured. Please capture a photo first.');
+                    return;
+                }
+                formData.append('face_photo_data', facePhotoData);
+                console.log('Submitting webcam capture data:', facePhotoData.substring(0, 50) + '...');
+            } else {
+                // File mode - send file upload
+                const fileInput = document.getElementById('face-photo-file');
+                const file = fileInput.files[0];
+                if (!file) {
+                    showError(form, 'No file selected. Please select a photo first.');
+                    return;
+                }
+                formData.append('document_file', file);
+                console.log('Submitting file upload:', file.name);
+            }
+            
+            // Update button state
+            saveButton.disabled = true;
+            saveButton.textContent = 'Uploading...';
+            
+            // Submit the form
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    throw new Error('User not authenticated. Please log in.');
+                }
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Success - show message and reload
+                    const messagesDiv = document.getElementById('messages') || document.createElement('div');
+                    const successMessage = `${label} ${action === 'reupload' ? 're-uploaded' : action === 'replace' ? 'replaced' : 'uploaded'} successfully!`;
+                    messagesDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                        ${successMessage}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                    
+                    const container = document.querySelector('.container.mt-4');
+                    if (container) {
+                        container.prepend(messagesDiv);
+                    }
+                    
+                    bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                    
+                    // Redirect if specified
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    // Error from backend
+                    const errorMessage = data.errors ? 
+                        (Array.isArray(data.errors) ? 
+                            data.errors.map(err => err.message || err).join(', ') : 
+                            data.errors) : 
+                        'Upload failed.';
+                    showError(form, errorMessage);
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                showError(form, error.message || 'An error occurred during upload. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                saveButton.disabled = false;
+                if (isWebcamMode) {
+                    saveButton.textContent = 'Upload Photo';
+                } else {
+                    saveButton.textContent = 'Upload Photo';
+                }
+            });
+        };
+        
+        // Remove any existing event listeners and add the new one
+        form.removeEventListener('submit', submitHandler);
+        form.addEventListener('submit', submitHandler);
+        
+        // Also handle direct button clicks
+        saveButton.removeEventListener('click', submitHandler);
+        saveButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Save button clicked, triggering form submit');
+            form.dispatchEvent(new Event('submit'));
+        });
+    }
+    
+    // Setup standard form submission for non-face_photo documents
+    function setupStandardFormSubmission(actionUrl, label, action) {
+        const form = document.getElementById('documentUploadForm');
+        const saveButton = document.getElementById('saveDocument');
+        
+        // Create a custom submit handler function
+        const submitHandler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Standard form submission triggered for:', label);
+            clearError(form);
+            
+            const formData = new FormData(form);
+            
+            // Update button state
+            saveButton.disabled = true;
+            saveButton.textContent = 'Uploading...';
+            
+            // Submit the form
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (response.status === 401) {
+                    throw new Error('User not authenticated. Please log in.');
+                }
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Standard upload response:', data);
+                if (data.success) {
+                    console.log('Standard upload successful, showing message and reloading');
+                    // Success - show message and reload
+                    const messagesDiv = document.getElementById('messages') || document.createElement('div');
+                    const successMessage = `${label} ${action === 'reupload' ? 're-uploaded' : action === 'replace' ? 'replaced' : 'uploaded'} successfully!`;
+                    messagesDiv.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+                        ${successMessage}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                    
+                    const container = document.querySelector('.container.mt-4');
+                    if (container) {
+                        container.prepend(messagesDiv);
+                    }
+                    
+                    const modal = form.closest('.modal');
+                    if (modal) {
+                        bootstrap.Modal.getInstance(modal).hide();
+                    }
+                    
+                    // Redirect if specified, otherwise reload
+                    if (data.redirect_url) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect_url;
+                        }, 500);
+                    } else {
+                        setTimeout(() => {
+                            location.reload();
+                        }, 500);
+                    }
+                } else {
+                    // Error from backend
+                    console.log('Standard upload failed:', data);
+                    const errorMessage = data.errors ? 
+                        (Array.isArray(data.errors) ? 
+                            data.errors.map(err => err.message || err).join(', ') : 
+                            Object.values(data.errors).flat().join(', ')) : 
+                        'Upload failed.';
+                    showError(form, errorMessage);
+                }
+            })
+            .catch(error => {
+                console.error('Standard upload error:', error);
+                showError(form, error.message || 'An error occurred during upload. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                saveButton.disabled = false;
+                saveButton.textContent = 'Upload';
+            });
+        };
+        
+        // Remove any existing event listeners and add the new one
+        form.removeEventListener('submit', submitHandler);
+        form.addEventListener('submit', submitHandler);
+        
+        // Also handle direct button clicks
+        saveButton.removeEventListener('click', submitHandler);
+        saveButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Standard upload button clicked, triggering form submit');
+            form.dispatchEvent(new Event('submit'));
+        });
+    }
+    
+    // Document Upload Modal (for identity documents using new DocumentReview system)
+    document.querySelectorAll('[data-bs-target="#documentUploadModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const field = this.dataset.field;
+            const label = this.dataset.label;
+            const docType = this.dataset.docType;
+            const action = this.dataset.action || 'upload';
+            if (!field) {
+                console.error('Field is undefined');
+                return;
+            }
+            const modal = document.getElementById('documentUploadModal');
+            const title = modal.querySelector('#documentUploadModalLabel');
+            const form = modal.querySelector('#documentUploadForm');
+            const fileInput = modal.querySelector('#document_file');
+            const filePreview = modal.querySelector('#file_preview');
+            const filePreviewPdf = modal.querySelector('#file_preview_pdf');
+            const saveButton = modal.querySelector('#saveDocument');
+            const docTypeField = modal.querySelector('#doc_type_field');
+            const baseUrl = "{% url 'profiles:upload_identity_document' field='FIELD_PLACEHOLDER' %}";
+            const actionUrl = baseUrl.replace('FIELD_PLACEHOLDER', field);
+            
+            // Get UI elements
+            const regularUpload = document.getElementById('regular-file-upload');
+            const facePhotoInterface = document.getElementById('face-photo-interface');
+            const facePhotoData = document.getElementById('face_photo_data');
+            
+            title.textContent = `${action === 'reupload' ? 'Re-upload' : action === 'replace' ? 'Replace' : 'Upload'} ${label}`;
+            docTypeField.value = docType;
+            form.action = actionUrl;
+            clearError(form);
+            
+            // Show appropriate interface based on field type
+            if (field === 'face_photo') {
+                // Show face photo interface (dual mode)
+                regularUpload.style.display = 'none';
+                const facePhotoInterface = document.getElementById('face-photo-interface');
+                facePhotoInterface.style.display = 'block';
+                fileInput.required = false;
+                
+                // Setup dual mode functionality
+                initializeFacePhotoInterface();
+                
+                // Setup custom form submission for face photo
+                setupFacePhotoFormSubmission(actionUrl, label, action);
+                
+                saveButton.disabled = true;
+                saveButton.textContent = 'Select Upload Method';
+                
+            } else {
+                // Show regular file upload for other documents
+                regularUpload.style.display = 'block';
+                facePhotoInterface.style.display = 'none';
+                fileInput.required = true;
+                
+                // Reset file input
+                fileInput.value = '';
+                filePreview.style.display = 'none';
+                filePreview.src = '';
+                filePreviewPdf.style.display = 'none';
+                filePreviewPdf.src = '';
+                
+                fileInput.accept = 'image/jpeg,image/png,application/pdf';
+                const labelElement = modal.querySelector('label[for="document_file"]');
+                labelElement.textContent = 'Select Document (JPG, PNG, or PDF)';
+                
+                // Setup file input change handler
+                const newFileInput = fileInput.cloneNode(true);
+                fileInput.parentNode.replaceChild(newFileInput, fileInput);
+                
+                newFileInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = e => {
+                                filePreview.src = e.target.result;
+                                filePreview.style.display = 'block';
+                                filePreviewPdf.style.display = 'none';
+                            };
+                            reader.readAsDataURL(file);
+                        } else if (file.type === 'application/pdf') {
+                            const reader = new FileReader();
+                            reader.onload = e => {
+                                filePreviewPdf.src = e.target.result;
+                                filePreviewPdf.style.display = 'block';
+                                filePreview.style.display = 'none';
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    } else {
+                        showError(form, 'Please select a valid JPG, PNG, or PDF file.');
+                    }
+                });
+                
+                saveButton.disabled = false;
+                saveButton.textContent = 'Upload';
+                
+                // Setup unified form submission for non-face_photo documents
+                console.log('Setting up standard form submission for:', field, 'with URL:', actionUrl);
+                setupStandardFormSubmission(actionUrl, label, action);
+            }
+        });
+    });
+    
+    // Clean up webcam when modal is closed
+    document.getElementById('documentUploadModal').addEventListener('hidden.bs.modal', function () {
+        stopWebcam();
+        
+        // Reset face photo interface
+        const facePhotoInterface = document.getElementById('face-photo-interface');
+        if (facePhotoInterface && facePhotoInterface.style.display !== 'none') {
+            resetWebcamState();
+            resetFileState();
+            
+            // Reset to webcam mode as default
+            const webcamModeBtn = document.getElementById('webcam-mode-btn');
+            const uploadModeBtn = document.getElementById('upload-mode-btn');
+            const webcamMode = document.getElementById('webcam-capture-mode');
+            const fileMode = document.getElementById('file-upload-mode');
+            
+            if (webcamModeBtn && uploadModeBtn) {
+                webcamModeBtn.classList.add('active');
+                uploadModeBtn.classList.remove('active');
+                webcamMode.style.display = 'block';
+                fileMode.style.display = 'none';
+            }
+        }
+    });
+
+    // Operator Document Upload Modal
+    document.querySelectorAll('[data-bs-target="#operatorUploadModal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const operatorId = this.dataset.operatorId;
+            const vehicleId = this.dataset.vehicleId;
+            const action = this.dataset.action || 'upload';
+            const modal = document.getElementById('operatorUploadModal');
+            const title = modal.querySelector('#operatorUploadModalLabel');
+            const form = modal.querySelector('#operatorUploadForm');
+            const fileInput = modal.querySelector('#operator_document');
+            const filePreview = modal.querySelector('#operator_preview');
+            const filePreviewPdf = modal.querySelector('#operator_preview_pdf');
+            const saveButton = modal.querySelector('#saveOperator');
+            const operatorIdField = modal.querySelector('#operator_id');
+            const vehicleIdField = modal.querySelector('#vehicle_id');
+            const actionUrl = `{% url 'profiles:upload_operator_document' vehicle_id=0 %}`.replace('0', vehicleId);
+
+            title.textContent = `${action === 'edit' ? 'Edit' : 'Upload'} Operator Driver’s License`;
+            operatorIdField.value = operatorId || '';
+            vehicleIdField.value = vehicleId;
+            form.action = actionUrl;
+            fileInput.value = ''; // Clear file input
+            filePreview.style.display = 'none';
+            filePreview.src = '';
+            filePreviewPdf.style.display = 'none';
+            filePreviewPdf.src = '';
+            clearError(form);
+
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            filePreview.src = e.target.result;
+                            filePreview.style.display = 'block';
+                            filePreviewPdf.style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                    } else if (file.type === 'application/pdf') {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            filePreviewPdf.src = e.target.result;
+                            filePreviewPdf.style.display = 'block';
+                            filePreview.style.display = 'none';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                } else {
+                    showError(form, 'Please select a valid JPG, PNG, or PDF file.');
+                }
+            });
+
+            handleFormSubmit('operatorUploadForm', actionUrl, `Operator driver’s license ${action === 'edit' ? 'updated' : 'uploaded'} successfully!`);
+        });
+    });
+
+    // Edit Experience - fetch data and populate form
+    document.body.addEventListener('click', function(e) {
+        if (e.target.classList.contains('edit-experience-btn')) {
+            const expId = e.target.dataset.expId;
+            fetch(`/get-experience/${expId}/`, {
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    // Populate the form fields
+                    document.getElementById('edit_exp_id').value = data.data.id;
+                    document.getElementById('edit_exp_title').value = data.data.title;
+                    document.getElementById('edit_exp_company').value = data.data.company;
+                    document.getElementById('edit_exp_location').value = data.data.location || '';
+                    document.getElementById('edit_exp_start_date').value = data.data.start_date;
+                    document.getElementById('edit_exp_end_date').value = data.data.end_date || '';
+                    document.getElementById('edit_exp_current').checked = data.data.current || false;
+                    document.getElementById('edit_exp_description').value = data.data.description || '';
+                    // Show the modal
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('editExperienceModal')).show();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading experience:', error);
+            });
+        }
+    });
+
+    // Delete Experience
+    document.body.addEventListener('click', function(e) {
+        if (e.target.classList.contains('delete-experience-btn')) {
+            const expId = e.target.dataset.expId;
+            const expTitle = e.target.dataset.expTitle;
+            document.getElementById('exp_id').value = expId;
+            document.getElementById('exp-title').textContent = expTitle;
+            document.getElementById('deleteExperienceForm').action = `{% url 'profiles:delete_experience' 0 %}`.replace('0', expId);
+        }
+    });
+
+    // Edit Education - fetch data and populate form
+    document.body.addEventListener('click', function(e) {
+        if (e.target.classList.contains('edit-education-btn')) {
+            const eduId = e.target.dataset.eduId;
+            fetch(`/get-education/${eduId}/`, {
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    // Populate the form fields
+                    document.getElementById('edit_edu_id').value = data.data.id;
+                    document.getElementById('edit_edu_degree').value = data.data.degree;
+                    document.getElementById('edit_edu_field_of_study').value = data.data.field_of_study;
+                    document.getElementById('edit_edu_institution').value = data.data.institution;
+                    document.getElementById('edit_edu_start_date').value = data.data.start_date;
+                    document.getElementById('edit_edu_end_date').value = data.data.end_date || '';
+                    document.getElementById('edit_edu_current').checked = data.data.current || false;
+                    document.getElementById('edit_edu_description').value = data.data.description || '';
+                    // Show the modal
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('editEducationModal')).show();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading education:', error);
+            });
+        }
+    });
+
+    // Delete Education
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('button[data-bs-target="#deleteEducationModal"]')) {
+            const button = e.target.closest('button');
+            const eduId = button.dataset.eduId;
+            const eduTitle = button.dataset.eduTitle;
+            document.getElementById('edu_id').value = eduId;
+            document.getElementById('edu-title').textContent = eduTitle;
+            document.getElementById('deleteEducationForm').action = `{% url 'profiles:delete_education' 0 %}`.replace('0', eduId);
+        }
+    });
+
+    // Portfolio Modals
+    document.body.addEventListener('click', function(e) {
+        const button = e.target.closest('.edit-portfolio-btn, .view-portfolio-btn, .delete-portfolio-btn');
+        if (button) {
+            const portfolioId = button.dataset.portfolioId;
+            if (button.classList.contains('edit-portfolio-btn')) {
+                fetch(`/get-portfolio/${portfolioId}/`, {
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                })
+                .then(response => {
+                    if (response.status === 404) {
+                        throw new Error('Portfolio not found.');
+                    }
+                    if (response.status === 401) {
+                        throw new Error('User not authenticated. Please log in.');
+                    }
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.ok) {
+                        document.getElementById('edit_portfolio_id').value = portfolioId;
+                        document.getElementById('edit-portfolio-content').innerHTML = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_portfolio_title" class="form-label">Title</label>
+                                        <input type="text" class="form-control" id="edit_portfolio_title" name="title" value="${data.data.title}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_portfolio_description" class="form-label">Description</label>
+                                        <textarea class="form-control" id="edit_portfolio_description" name="description" rows="4">${data.data.description}</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_portfolio_role" class="form-label">Role</label>
+                                        <input type="text" class="form-control" id="edit_portfolio_role" name="role" value="${data.data.role}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_portfolio_skills" class="form-label">Skills</label>
+                                        <input type="text" class="form-control" id="edit_portfolio_skills" name="skills" value="${data.data.skills}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_portfolio_related_job" class="form-label">Related Job</label>
+                                        <input type="text" class="form-control" id="edit_portfolio_related_job" name="related_job" value="${data.data.related_job}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_completion_date" class="form-label">Completion Date</label>
+                                        <input type="date" class="form-control" id="edit_completion_date" name="completion_date" value="${data.data.completion_date}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_sample_image" class="form-label">Image</label>
+                                        <input type="file" class="form-control" id="edit_sample_image" name="image" accept="image/*">
+                                        ${data.data.image ? `<small class="form-text text-muted">Current: <a href="${data.data.image}" target="_blank">View Image</a></small>` : ''}
+                                        <img id="edit_image_preview" class="img-fluid mt-2" style="display: none; max-height: 150px;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_sample_video" class="form-label">Video</label>
+                                        <input type="file" class="form-control" id="edit_sample_video" name="video" accept="video/*">
+                                        ${data.data.sample.video ? `<small class="form-text text-muted">Current: <a href="${data.data.sample.video}" target="_blank">View Video</a></small>` : ''}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_sample_audio" class="form-label">Audio</label>
+                                        <input type="file" class="form-control" id="edit_sample_audio" name="audio" accept="audio/*">
+                                        ${data.data.sample.audio ? `<small class="form-text text-muted">Current: <a href="${data.data.sample.audio}" target="_blank">View Audio</a></small>` : ''}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_sample_pdf" class="form-label">PDF</label>
+                                        <input type="file" class="form-control" id="edit_sample_pdf" name="pdf" accept=".pdf">
+                                        ${data.data.sample.pdf ? `<small class="form-text text-muted">Current: <a href="${data.data.sample.pdf}" target="_blank">View PDF</a></small>` : ''}
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_sample_url" class="form-label">URL</label>
+                                        <input type="url" class="form-control" id="edit_sample_url" name="url" value="${data.data.sample.url || ''}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="edit_sample_text_block" class="form-label">Project Notes</label>
+                                        <textarea class="form-control" id="edit_sample_text_block" name="text_block" rows="4">${data.data.sample.text_block || ''}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        const editImageInput = document.getElementById('edit_sample_image');
+                        const editImagePreview = document.getElementById('edit_image_preview');
+                        editImageInput.addEventListener('change', function() {
+                            const file = this.files[0];
+                            if (file && file.type.startsWith('image/')) {
+                                const reader = new FileReader();
+                                reader.onload = e => {
+                                    editImagePreview.src = e.target.result;
+                                    editImagePreview.style.display = 'block';
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        });
+                        // Set the form action for regular form submission
+                        document.getElementById('editPortfolioForm').action = `{% url 'profiles:edit_portfolio' 0 %}`.replace('0', portfolioId);
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('editPortfolioModal')).show();
+                    } else {
+                        showError(document.getElementById('editPortfolioForm'), data.error || data.errors || 'Failed to load portfolio.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showError(document.getElementById('editPortfolioForm'), error.message || 'An error occurred while fetching portfolio data.');
+                });
+            } else if (button.classList.contains('view-portfolio-btn')) {
+                fetch(`/get-portfolio/${portfolioId}/`, {
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                })
+                .then(response => {
+                    if (response.status === 404) {
+                        throw new Error('Portfolio not found.');
+                    }
+                    if (response.status === 401) {
+                        throw new Error('User not authenticated. Please log in.');
+                    }
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.ok) {
+                        document.getElementById('viewPortfolioModalLabel').textContent = data.data.title;
+                        document.getElementById('view-portfolio-content').innerHTML = `
+                            ${data.data.image ? `<img src="${data.data.image}" class="img-fluid mb-3 rounded" alt="${data.data.title} Image" style="max-height: 300px; width: 100%; object-fit: cover;">` : ''}
+                            <h6>Description</h6>
+                            <p>${data.data.description || ''}</p>
+                            ${data.data.role ? `<p class="portfolio-meta"><i class="fas fa-user-tie"></i> ${data.data.role}</p>` : ''}
+                            ${data.data.skills ? `<p class="portfolio-meta"><i class="fas fa-tools"></i> ${data.data.skills}</p>` : ''}
+                            ${data.data.related_job ? `<p class="portfolio-meta"><i class="fas fa-briefcase"></i> ${data.data.related_job}</p>` : ''}
+                            ${data.data.sample ? `
+                                <h6>Media Files</h6>
+                                <div class="media-icons d-flex flex-wrap gap-3">
+                                    ${data.data.sample.video ? `
+                                        <div class="media-preview">
+                                            <video controls class="w-100" style="max-height: 200px;">
+                                                <source src="${data.data.sample.video}" type="video/mp4">
+                                                Your browser does not support the video tag.
+                                            </video>
+                                            <a href="${data.data.sample.video}" target="_blank" class="media-icon video mt-2 btn btn-outline-primary">
+                                                <i class="fas fa-video"></i> Download Video
+                                            </a>
+                                        </div>
+                                    ` : ''}
+                                    ${data.data.sample.audio ? `
+                                        <div class="media-preview">
+                                            <audio controls class="w-100">
+                                                <source src="${data.data.sample.audio}" type="audio/mpeg">
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                            <a href="${data.data.sample.audio}" target="_blank" class="media-icon audio mt-2 btn btn-outline-primary">
+                                                <i class="fas fa-music"></i> Download Audio
+                                            </a>
+                                        </div>
+                                    ` : ''}
+                                    ${data.data.sample.pdf ? `
+                                        <a href="${data.data.sample.pdf}" target="_blank" class="media-icon pdf btn btn-outline-danger">
+                                            <i class="fas fa-file-pdf"></i> View/Download PDF
+                                        </a>
+                                    ` : ''}
+                                    ${data.data.sample.url ? `
+                                        <a href="${data.data.sample.url}" target="_blank" class="media-icon url btn btn-outline-primary">
+                                            <i class="fas fa-link"></i> Visit Link
+                                        </a>
+                                    ` : ''}
+                                    ${data.data.sample.text_block ? `
+                                        <div class="media-preview">
+                                            <div class="text-block-content">${data.data.sample.text_block.replace(/\n/g, '<br>')}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
+                        `;
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('viewPortfolioModal')).show();
+                    } else {
+                        showError(document.getElementById('view-portfolio-content'), data.error || data.errors || 'Failed to load portfolio.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showError(document.getElementById('view-portfolio-content'), error.message || 'An error occurred while fetching portfolio data.');
+                });
+            } else if (button.classList.contains('delete-portfolio-btn')) {
+                fetch(`/get-portfolio/${portfolioId}/`, {
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                })
+                .then(response => {
+                    if (response.status === 404) {
+                        throw new Error('Portfolio not found.');
+                    }
+                    if (response.status === 401) {
+                        throw new Error('User not authenticated. Please log in.');
+                    }
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! Status: ${response.status}, Response: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.ok) {
+                        document.getElementById('portfolio_id').value = portfolioId;
+                        document.getElementById('portfolio-title').textContent = data.data.title;
+                        document.getElementById('deletePortfolioForm').action = `{% url 'profiles:delete_portfolio' 0 %}`.replace('0', portfolioId);
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('deletePortfolioModal')).show();
+                    } else {
+                        showError(document.getElementById('deletePortfolioForm'), data.error || data.errors || 'Failed to load portfolio.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    showError(document.getElementById('deletePortfolioForm'), error.message || 'An error occurred while fetching portfolio data.');
+                });
+            }
+        }
+    });
+
+    // Prevent multiple backdrops
+    document.addEventListener('hidden.bs.modal', () => {
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop, index) => {
+            if (index > 0) backdrop.remove();
+        });
+    });
+
+    // Close other modals before opening a new one
+    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.modal.show').forEach(modal => {
+                bootstrap.Modal.getInstance(modal).hide();
+            });
+        });
+    });
+
+    // Portfolio image preview
+    const imageInput = document.getElementById('sample_image');
+    const imagePreview = document.getElementById('image_preview');
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    // Forms now use regular Django form submission - no AJAX needed
+    // handleFormSubmit calls removed - forms will redirect on submission
+    
+    // Referral code copy and share functions
+    window.copyReferralCode = function() {
+        const referralCode = document.getElementById('referralCode').value;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(referralCode).then(() => {
+                showToast('Referral code copied to clipboard!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                fallbackCopyTextToClipboard(referralCode);
+            });
+        } else {
+            fallbackCopyTextToClipboard(referralCode);
+        }
+    };
+    
+    window.shareReferralCode = function() {
+        const referralCode = document.getElementById('referralCode').value;
+        const shareData = {
+            title: 'Join me on this platform!',
+            text: `Use my referral code: ${referralCode}`,
+            url: `${window.location.origin}/register/?ref=${referralCode}`
+        };
+        
+        if (navigator.share) {
+            navigator.share(shareData).then(() => {
+                showToast('Thanks for sharing!', 'success');
+            }).catch(err => {
+                console.log('Error sharing:', err);
+                // Fallback to copying URL
+                copyReferralLink(shareData.url);
+            });
+        } else {
+            // Fallback for browsers that don't support Web Share API
+            copyReferralLink(shareData.url);
+        }
+    };
+    
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                showToast('Referral code copied to clipboard!', 'success');
+            } else {
+                showToast('Failed to copy referral code', 'error');
+            }
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+            showToast('Failed to copy referral code', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+    
+    function copyReferralLink(url) {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Referral link copied to clipboard!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy link: ', err);
+                fallbackCopyTextToClipboard(url);
+            });
+        } else {
+            fallbackCopyTextToClipboard(url);
+        }
+    }
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remove toast element after it's hidden
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+});
+</script>
+{% endblock %}

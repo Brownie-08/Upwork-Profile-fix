@@ -1,0 +1,90 @@
+{% extends "core/base.html" %}
+{% block title %}Deposit Funds via MTN MoMo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Deposit Funds via MTN Mobile Money</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <form id="deposit-form" action="{% url 'wallets:momo_deposit' %}" method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount to Deposit (E)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">E</span>
+                                <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0.01" required>
+                                <div class="invalid-feedback">Please enter a valid amount (minimum E0.01).</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Mobile Money Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text">+268</span>
+                                <input type="tel" class="form-control" id="phone_number" name="phone_number" required
+                                       pattern="\+2687[0-9]{7}" placeholder="76012345" maxlength="12">
+                                <div class="invalid-feedback">Please enter a valid Swaziland number (e.g., +26876012345).</div>
+                            </div>
+                            <div class="form-text">Enter your Swaziland MTN MoMo number starting with +268 followed by 8 digits.</div>
+                        </div>
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <ol class="mb-0">
+                                    <li>Enter the amount you want to deposit.</li>
+                                    <li>Enter your Swaziland MTN MoMo number (e.g., +26876012345).</li>
+                                    <li>Click "Request Payment".</li>
+                                    <li>Check your phone for a MoMo prompt.</li>
+                                    <li>Enter your MoMo PIN to authorize the payment.</li>
+                                    <li>You’ll be redirected to the transaction status page.</li>
+                                </ol>
+                            </small>
+                        </div>
+                        <div class="text-center mb-4">
+                            <button type="submit" class="btn btn-primary">Request Payment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('deposit-form');
+    const phoneInput = document.getElementById('phone_number');
+
+    // Prepend +268 if not present
+    phoneInput.addEventListener('input', function() {
+        let value = this.value.replace(/[^\d+]/g, '');
+        if (!value.startsWith('+268')) {
+            value = '+268' + value.replace(/^\+?268/, '');
+            this.value = value;
+        }
+        if (value.length > 12) {
+            this.value = value.slice(0, 12);
+        }
+    });
+
+    // Bootstrap form validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

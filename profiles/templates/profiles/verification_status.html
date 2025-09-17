@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="mb-4">Verification Status</h2>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Profile Verification Status:</h5>
+                    <p class="card-text">
+                        {% if verification_status == 'Verified' %}
+                            <span class="badge bg-success">Verified</span>
+                        {% else %}
+                            <span class="badge bg-warning">Pending</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if missing_documents %}
+                <div class="alert alert-warning">
+                    <h5>Missing Documents:</h5>
+                    <ul>
+                        {% for document in missing_documents %}
+                            <li>{{ document }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5>Registered Vehicles</h5>
+                </div>
+                <div class="card-body">
+                    {% if vehicles.exists %}
+                        <ul class="list-group">
+                            {% for vehicle in vehicles %}
+                                <li class="list-group-item">
+                                    <strong>{{ vehicle.make }} {{ vehicle.model }}</strong>
+                                    ({{ vehicle.year }}) -
+                                    <span class="text-muted">License Plate: {{ vehicle.license_plate }}</span>
+                                    {% if vehicle.verification_status == 'Verified' %}
+                                        <span class="badge bg-success">Verified</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No vehicles registered yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="{% url 'add_vehicle' %}" class="btn btn-primary">Add New Vehicle</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

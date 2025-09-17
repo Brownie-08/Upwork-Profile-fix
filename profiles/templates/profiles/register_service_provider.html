@@ -1,0 +1,49 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Register as Service Provider</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="form-label">Select Service Type</label>
+                            <select name="account_type" class="form-select" required>
+                                <option value="">Choose service type...</option>
+                                <option value="TAXI">Taxi Service</option>
+                                <option value="DELIVERY">Delivery Service</option>
+                            </select>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <h5 class="alert-heading">Requirements:</h5>
+                            <ul class="mb-0">
+                                <li>Valid government-issued ID</li>
+                                <li>Business license</li>
+                                <li>Insurance documentation</li>
+                                <li>Vehicle registration (if applicable)</li>
+                                <li>Background check consent</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" required id="terms">
+                            <label class="form-check-label" for="terms">
+                                I agree to the terms and conditions and consent to a background check
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Continue Registration</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "core/base.html" %}
+{% block title %}Transaction Status{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Transaction Status</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    {% if transaction %}
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <strong>Transaction ID:</strong> {{ transaction.reference_id }}
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Type:</strong> {{ transaction.transaction_type }}
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Amount:</strong> E{{ transaction.amount|floatformat:2 }}
+                            </li>
+                            <li class="list-group-item">
+                                <strong>Status:</strong>
+                                <span class="badge {% if transaction.status == 'COMPLETED' %}bg-success{% elif transaction.status == 'PENDING' or transaction.status == 'PROCESSING' %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ transaction.get_status_display }}
+                                </span>
+                            </li>
+                            {% if transaction.momo_number %}
+                                <li class="list-group-item">
+                                    <strong>MoMo Number:</strong> {{ transaction.momo_number }}
+                                </li>
+                            {% endif %}
+                            {% if momo_payment %}
+                                <li class="list-group-item">
+                                    <strong>MoMo Transaction ID:</strong> {{ momo_payment.momo_transaction_id }}
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>MoMo Status:</strong>
+                                    <span class="badge {% if momo_payment.payment_status == 'COMPLETED' %}bg-success{% elif momo_payment.payment_status == 'PROCESSING' %}bg-warning{% else %}bg-danger{% endif %}">
+                                        {{ momo_payment.payment_status }}
+                                    </span>
+                                </li>
+                                {% if momo_payment.error_message %}
+                                    <li class="list-group-item">
+                                        <strong>Error:</strong> {{ momo_payment.error_message }}
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        </ul>
+                        <div class="text-center mt-4">
+                            <a href="{% url 'wallets:wallet_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+                        </div>
+                    {% else %}
+                        <p class="text-center">Transaction not found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

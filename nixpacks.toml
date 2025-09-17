@@ -1,0 +1,13 @@
+[phases.setup]
+nixPkgs = ["python3", "postgresql_16"]
+
+[phases.build]
+cmds = [
+    "pip install -r requirements.txt",
+    "python manage.py collectstatic --noinput --clear",
+    "python manage.py migrate --noinput",
+    "python manage.py create_production_superuser"
+]
+
+[phases.start]
+cmd = "gunicorn lusitohub.wsgi:application -c gunicorn.conf.py"

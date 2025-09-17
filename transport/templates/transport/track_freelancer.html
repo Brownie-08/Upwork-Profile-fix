@@ -1,0 +1,66 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+    <div class="container">
+        <h2>Taxi/Delivery Truck Location</h2>
+        <div id="map" style="height: 500px;"></div>
+    </div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap" async defer></script>
+<script>
+    function initMap() {
+        var freelancerLocation = { lat: parseFloat("{{ freelancer.profile.latitude }}"), lng: parseFloat("{{ freelancer.profile.longitude }}") };
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 14,
+            center: freelancerLocation
+        });
+        var marker = new google.maps.Marker({
+            position: freelancerLocation,
+            map: map,
+            title: 'Freelancer Location'
+        });
+    }
+</script>
+
+<script>
+    function calculateAndDisplayRoute(directionsService, directionsRenderer, freelancerLocation, pickupLocation) {
+        directionsService.route(
+            {
+                origin: freelancerLocation,
+                destination: pickupLocation,
+                travelMode: google.maps.TravelMode.DRIVING
+            },
+            function(response, status) {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(response);
+                    var route = response.routes[0].legs[0];
+                    document.getElementById('travel-time').innerHTML = 'Estimated travel time: ' + route.duration.text;
+                } else {
+                    window.alert('Directions request failed due to ' + status);
+                }
+            }
+        );
+    }
+
+    function initMap() {
+        var freelancerLocation = { lat: parseFloat("{{ freelancer.profile.latitude }}"), lng: parseFloat("{{ freelancer.profile.longitude }}") };
+        var pickupLocation = { lat: parseFloat("{{ pickup.latitude }}"), lng: parseFloat("{{ pickup.longitude }}") };
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 14,
+            center: freelancerLocation
+        });
+        var marker = new google.maps.Marker({
+            position: freelancerLocation,
+            map: map,
+            title: 'Freelancer Location'
+        });
+
+        var directionsService = new google.maps.DirectionsService();
+        var directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer.setMap(map);
+
+        calculateAndDisplayRoute(directionsService, directionsRenderer, freelancerLocation, pickupLocation);
+    }
+</script>
+<div id="travel-time"></div>
+{% endblock %}

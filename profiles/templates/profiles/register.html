@@ -1,0 +1,54 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Join LusitoHub</h2>
+                    <form method="POST">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="text-center mt-4">
+                            <button class="btn btn-primary" type="submit">Sign Up</button>
+                            <p class="mt-3">
+                                Already have an account? <a href="{% url 'login' %}">Sign In</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // Auto-populate referral code from URL parameter
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const referralCode = urlParams.get('ref');
+        
+        if (referralCode) {
+            // Find the referral code input field (it might have an auto-generated ID)
+            const referralInputs = document.querySelectorAll('input[name*="referral_code"], input[id*="referral_code"], #id_referral_code');
+            
+            if (referralInputs.length > 0) {
+                referralInputs[0].value = referralCode.toUpperCase();
+                // Add a subtle highlight effect
+                referralInputs[0].style.backgroundColor = '#e3f2fd';
+                referralInputs[0].style.border = '2px solid #2196f3';
+                
+                // Show a message to the user
+                const message = document.createElement('div');
+                message.className = 'alert alert-info mt-2';
+                message.innerHTML = '<i class="fas fa-info-circle me-2"></i>Referral code has been automatically filled from your invitation link!';
+                referralInputs[0].parentNode.appendChild(message);
+                
+                // Scroll to the referral code field
+                referralInputs[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+</script>
+{% endblock %}

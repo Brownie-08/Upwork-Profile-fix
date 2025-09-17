@@ -1,0 +1,238 @@
+{% extends "core/base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% load profile_tags %}
+
+{% block head %}
+<style>
+    .card { transition: transform 0.2s; }
+    .card:hover { transform: translateY(-5px); }
+    .error-message { display: none; margin-top: 0.5rem; font-size: 0.875rem; color: #dc3545; }
+    .field-error { color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem; display: none; }
+    .preview-container { width: 200px; height: 150px; display: flex; justify-content: center; align-items: center; margin: 0 auto; overflow: hidden; }
+    .file-preview { max-height: 150px !important; max-width: 200px !important; width: auto !important; height: auto !important; object-fit: contain !important; display: block !important; }
+</style>
+{% endblock %}
+
+{% block title %}Edit Vehicle Documents{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Edit Documents for {{ vehicle }}</h3>
+                </div>
+                <div class="card-body">
+                    <form id="editVehicleDocumentForm" method="POST" enctype="multipart/form-data" action="{% url 'profiles:edit_vehicle_document' vehicle.id document.id %}">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <h5 class="mb-3">Vehicle Documents</h5>
+                            {% for field, label in vehicle_document_fields %}
+                                {% if field != 'tax_document' %}
+                                    <div class="document-status mb-3">
+                                        <label for="{{ field }}" class="form-label">{{ label }}</label>
+                                        <input type="file" id="{{ field }}" name="{{ field }}" class="form-control" {% if field != 'insurance' %}required{% endif %} accept="image/jpeg,image/png,application/pdf" aria-describedby="{{ field }}Help">
+                                        <div id="{{ field }}Help" class="form-text">
+                                            Upload JPG, PNG, or PDF (max 5MB, recommended <1MB). Current: 
+                                            {% if document|get_field:field %}
+                                                <a href="{{ document|get_field:field }}" target="_blank">View</a>
+                                            {% else %}
+                                                None
+                                            {% endif %}
+                                        </div>
+                                        <div class="preview-container">
+                                            <img id="{{ field }}_preview" class="file-preview mt-2" style="display: none;" alt="{{ label }} preview">
+                                        </div>
+                                        <div class="preview-container">
+                                            <iframe id="{{ field }}_preview_pdf" class="file-preview mt-2" style="display: none;" title="{{ label }} PDF preview"></iframe>
+                                        </div>
+                                        <div id="{{ field }}_error" class="field-error"></div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="error-message alert alert-danger"></div>
+                        <button type="submit" class="btn btn-primary">Update Documents</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showError(form, message, fieldId = null) {
+        if (fieldId) {
+            const errorDiv = document.getElementById(`${fieldId}_error`);
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        } else {
+            const errorDiv = form.querySelector('.error-message');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                errorDiv.setAttribute('role', 'alert');
+            }
+        }
+    }
+
+    function clearError(form, fieldId = null) {
+        if (fieldId) {
+            const errorDiv = document.getElementById(`${fieldId}_error`);
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.style.display = 'none';
+            }
+        } else {
+            const errorDiv = form.querySelector('.error-message');
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.style.display = 'none';
+                errorDiv.removeAttribute('role');
+            }
+        }
+    }
+
+    function handleFileInput(fileInput, previewImg, previewPdf, maxSizeMB, allowedTypes, errorForm, fileTypeMessage) {
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            clearError(errorForm, fileInput.id);
+            previewImg.style.display = 'none';
+            previewImg.src = '';
+            previewPdf.style.display = 'none';
+            previewPdf.src = '';
+
+            if (!file) {
+                console.log('No file selected for preview.');
+                return;
+            }
+
+            if (file.size > maxSizeMB * 1024 * 1024) {
+                showError(errorForm, `File size exceeds ${maxSizeMB}MB limit.`, fileInput.id);
+                this.value = '';
+                return;
+            }
+
+            if (!allowedTypes.includes(file.type)) {
+                showError(errorForm, `Please select a valid ${fileTypeMessage}.`, fileInput.id);
+                this.value = '';
+                return;
+            }
+
+            console.log(`Selected file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    previewPdf.style.display = 'none';
+                    console.log('Image preview loaded.');
+                };
+                reader.onerror = () => console.error('Error reading image file.');
+                reader.readAsDataURL(file);
+            } else if (file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    previewPdf.src = e.target.result;
+                    previewPdf.style.display = 'block';
+                    previewImg.style.display = 'none';
+                    console.log('PDF preview loaded in iframe.');
+                };
+                reader.onerror = () => console.error('Error reading PDF file.');
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    {% for field, label in vehicle_document_fields %}
+        {% if field != 'tax_document' %}
+            const fileInput_{{ field }} = document.getElementById('{{ field }}');
+            const filePreview_{{ field }} = document.getElementById('{{ field }}_preview');
+            const filePreviewPdf_{{ field }} = document.getElementById('{{ field }}_preview_pdf');
+            handleFileInput(
+                fileInput_{{ field }},
+                filePreview_{{ field }},
+                filePreviewPdf_{{ field }},
+                5,
+                ['image/jpeg', 'image/png', 'application/pdf'],
+                document.getElementById('editVehicleDocumentForm'),
+                'JPG, PNG, or PDF file'
+            );
+        {% endif %}
+    {% endfor %}
+
+    document.getElementById('editVehicleDocumentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        clearError(this);
+        ['drivers_license', 'blue_book', 'inspection_certificate', 'insurance'].forEach(field => {
+            clearError(this, field);
+        });
+
+        const formData = new FormData(this);
+        const submitButton = this.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+
+        fetch("{% url 'profiles:edit_vehicle_document' vehicle.id document.id %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Documents updated successfully.');
+                window.location.href = data.redirect_url;
+            } else {
+                const errors = data.errors || [];
+                let generalError = '';
+                errors.forEach(error => {
+                    const field = error.field;
+                    const message = error.message;
+                    if (field && document.getElementById(`${field}_error`)) {
+                        showError(this, message, field);
+                    } else {
+                        generalError += message + ', ';
+                    }
+                });
+                if (generalError) {
+                    showError(this, generalError.slice(0, -2));
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError(this, error.message || 'An error occurred during submission.');
+        })
+        .finally(() => {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Update Documents';
+        });
+    });
+});
+</script>
+{% endblock %}

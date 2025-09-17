@@ -1,0 +1,149 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/admin.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="financial-overview">
+    <!-- Date Range Filter -->
+    <div class="date-filter card">
+        <form method="get" class="date-form">
+            <div class="form-row">
+                <div class="field-box">
+                    <label for="start_date">Start Date:</label>
+                    <input type="date" name="start_date" id="start_date" value="{{ start_date }}">
+                </div>
+                <div class="field-box">
+                    <label for="end_date">End Date:</label>
+                    <input type="date" name="end_date" id="end_date" value="{{ end_date }}">
+                </div>
+                <button type="submit" class="button">Apply Filter</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Total Balance</h3>
+            <div class="metric-value positive">E {{ site_account.total_balance|floatformat:2 }}</div>
+            <div class="metric-label">Current Balance</div>
+        </div>
+        <div class="metric-card">
+            <h3>Held Funds</h3>
+            <div class="metric-value neutral">E {{ metrics.active_holds|floatformat:2 }}</div>
+            <div class="metric-label">Active Holds</div>
+        </div>
+        <div class="metric-card">
+            <h3>Commissions</h3>
+            <div class="metric-value positive">E {{ metrics.total_commissions|floatformat:2 }}</div>
+            <div class="metric-label">Period Total</div>
+        </div>
+        <div class="metric-card">
+            <h3>Transaction Volume</h3>
+            <div class="metric-value neutral">E {{ metrics.transaction_volume|floatformat:2 }}</div>
+            <div class="metric-label">{{ metrics.total_transactions }} Transactions</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+        <!-- Daily Volume Chart -->
+        <div class="chart-card">
+            <h3>Daily Transaction Volume</h3>
+            <canvas id="volumeChart"></canvas>
+        </div>
+        <!-- Commission Distribution Chart -->
+        <div class="chart-card">
+            <h3>Commission Distribution</h3>
+            <canvas id="commissionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Detailed Statistics -->
+    <div class="statistics-grid">
+        <div class="stat-card">
+            <h3>Transaction Summary</h3>
+            <table class="stats-table">
+                <tr>
+                    <th>Type</th>
+                    <th>Count</th>
+                    <th>Amount</th>
+                </tr>
+                {% for item in commission_by_type %}
+                <tr>
+                    <td>{{ item.type }}</td>
+                    <td>{{ item.count }}</td>
+                    <td>E {{ item.total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div class="stat-card">
+            <h3>Daily Volumes</h3>
+            <table class="stats-table">
+                <tr>
+                    <th>Date</th>
+                    <th>Transactions</th>
+                    <th>Volume</th>
+                </tr>
+                {% for day in daily_volumes %}
+                <tr>
+                    <td>{{ day.day|date:"M d, Y" }}</td>
+                    <td>{{ day.count }}</td>
+                    <td>E {{ day.total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'admin/js/financial_charts.js' %}"></script>
+<script>
+    // Initialize charts with data from context
+    document.addEventListener('DOMContentLoaded', function() {
+        // Daily Volume Chart
+        const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+        new Chart(volumeCtx, {
+            type: 'line',
+            data: {
+                labels: {{ daily_volumes|map:"day"|safe }},
+                datasets: [{
+                    label: 'Transaction Volume',
+                    data: {{ daily_volumes|map:"total"|safe }},
+                    borderColor: '#4CAF50',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Commission Distribution Chart
+        const commissionCtx = document.getElementById('commissionChart').getContext('2d');
+        new Chart(commissionCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ commission_by_type|map:"type"|safe }},
+                datasets: [{
+                    data: {{ commission_by_type|map:"total"|safe }},
+                    backgroundColor: ['#4CAF50', '#2196F3', '#FFC107', '#9C27B0']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    });
+</script>
+{% endblock %}

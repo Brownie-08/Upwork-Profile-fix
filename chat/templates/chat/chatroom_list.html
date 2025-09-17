@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}My Chats{% endblock %}
+
+{% block content %}
+<div class="job_container">
+    <div class="card project-info-card shadow">
+        <div class="card-header">
+            <h1>My Conversations</h1>
+        </div>
+        <div class="card-body">
+            {% if chatrooms %}
+                <ul class="chatroom-list">
+                    {% for chatroom in chatrooms %}
+                        <li class="chatroom-item {% if chatroom.unread_count %}unread{% endif %}" data-chatroom-id="{{ chatroom.id }}">
+                            <a href="{% url 'chatroom' chatroom.id %}" class="chatroom-link">
+                                <div class="chatroom-info">
+                                    {% if user_role == 'client' %}
+                                        <img src="{% if chatroom.freelancer.profile.profile_picture and chatroom.freelancer.profile.profile_picture.name != 'default.jpg' %}{{ chatroom.freelancer.profile.profile_picture.url }}{% else %}{% static 'images/user-avatar.svg' %}{% endif %}" 
+                                             alt="Freelancer" 
+                                             class="profile-image"
+                                             style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;"
+                                             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImF2YXRhckdyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZTVlN2ViO3N0b3Atb3BhY2l0eToxIiAvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6I2QxZDViYjtzdG9wLW9wYWNpdHk6MSIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0idXJsKCNhdmF0YXJHcmFkaWVudCkiLz48Y2lyY2xlIGN4PSIyMCIgY3k9IjE1IiByPSI2IiBmaWxsPSIjOWNhM2FmIi8+PHBhdGggZD0iTSA4IDMyIEMgOCAyNSAxMyAyMiAyMCAyMiBDIDI3IDIyIDMyIDI1IDMyIDMyIFoiIGZpbGw9IiM5Y2EzYWYiLz48L3N2Zz4='">
+                                        <span class="chat-username">{{ chatroom.freelancer.profile.first_name }}</span>
+                                    {% else %}
+                                        <img src="{% if chatroom.client.profile.profile_picture and chatroom.client.profile.profile_picture.name != 'default.jpg' %}{{ chatroom.client.profile.profile_picture.url }}{% else %}{% static 'images/user-avatar.svg' %}{% endif %}" alt="Client" class="profile-image" 
+                                            style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;"
+                                            onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImF2YXRhckdyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZTVlN2ViO3N0b3Atb3BhY2l0eToxIiAvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6I2QxZDViYjtzdG9wLW9wYWNpdHk6MSIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0idXJsKCNhdmF0YXJHcmFkaWVudCkiLz48Y2lyY2xlIGN4PSIyMCIgY3k9IjE1IiByPSI2IiBmaWxsPSIjOWNhM2FmIi8+PHBhdGggZD0iTSA4IDMyIEMgOCAyNSAxMyAyMiAyMCAyMiBDIDI3IDIyIDMyIDI1IDMyIDMyIFoiIGZpbGw9IiM5Y2EzYWYiLz48L3N2Zz4='">
+                                        <span class="chat-username">{{ chatroom.client.profile.first_name }}</span>
+                                    {% endif %}
+                                    <div class="project-details">
+                                        <h5 class="project-title">{{ chatroom.project.title }}</h5>
+                                        <span class="project-status">{{ chatroom.get_project_status_display }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                            <div class="chatroom-meta">
+                                {% if chatroom.unread_notifications %}
+                                    <span class="notification-badge">{{ chatroom.unread_notifications|length }} new notifications</span>
+                                {% endif %}
+                                {% if chatroom.pending_milestones %}
+                                    <span class="milestone-badge">{{ chatroom.pending_milestones }} pending milestones</span>
+                                {% endif %}
+                                {% if chatroom.unread_count %}
+                                    <span class="unread-badge">{{ chatroom.unread_count }} unread messages</span>
+                                {% endif %}
+                                <span class="last-message-time">{{ chatroom.last_message_time|timesince }} ago</span>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="no-chats">
+                    <p>You don't have any active conversations yet.</p>
+                    <a href="{% url 'home' %}" class="btn btn-primary btn-lg">Browse Jobs</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatroomItems = document.querySelectorAll('.chatroom-item');
+    chatroomItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const chatroomId = this.getAttribute('data-chatroom-id');
+            window.location.href = `/chat/${chatroomId}/`;
+        });
+    });
+});
+</script>
+{% endblock %}
