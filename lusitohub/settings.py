@@ -574,7 +574,7 @@ JAZZMIN_UI_TWEAKS = {
     "actions_sticky_top": False
 }
 
-# Production Security Settings for Railway
+# Production Security Settings for Render
 if not DEBUG:
     # Security Headers
     SECURE_BROWSER_XSS_FILTER = True
@@ -584,27 +584,35 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     
-    # SSL/HTTPS Settings (Railway provides SSL automatically)
+    # SSL/HTTPS Settings (Render provides SSL automatically)
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     
-    # CSRF Configuration for Railway
+    # CSRF Configuration for Render
     CSRF_TRUSTED_ORIGINS = [
-        'https://*.railway.app',
-        'https://*.up.railway.app',
-        'https://web-production-53602.up.railway.app',  # Your specific Railway domain
+        'https://*.onrender.com',
+        'https://*.render.com',
     ]
     
-    # CSRF Cookie settings for Railway
+    # Add specific Render domain if available
+    if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+        render_hostname = os.environ['RENDER_EXTERNAL_HOSTNAME']
+        CSRF_TRUSTED_ORIGINS.extend([
+            f'https://{render_hostname}',
+            f'http://{render_hostname}',  # Fallback for development
+        ])
+    
+    # CSRF Cookie settings for Render
     CSRF_COOKIE_DOMAIN = None  # Let Django auto-detect
     CSRF_COOKIE_PATH = '/'
-    CSRF_COOKIE_SAMESITE = 'Lax'  # More permissive than 'Strict'
-    CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access if needed
+    CSRF_COOKIE_SAMESITE = 'Lax'  # More permissive than 'Strict' for file uploads
+    CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access for AJAX uploads
     CSRF_USE_SESSIONS = False  # Use cookies instead of sessions
+    CSRF_COOKIE_AGE = 3600  # 1 hour - reasonable for file uploads
     
-    print(f"🔒 Production CSRF configured for Railway")
+    print(f"🔒 Production CSRF configured for Render")
     print(f"   Trusted origins: {CSRF_TRUSTED_ORIGINS}")
     
     # Additional security settings
@@ -620,22 +628,22 @@ else:
     print(f"🔓 Development CSRF configured")
     print(f"   Trusted origins: {CSRF_TRUSTED_ORIGINS}")
 
-# Railway specific environment variables
-RAILWAY_STATIC_URL = env('RAILWAY_STATIC_URL', default=STATIC_URL)
-RAILWAY_MEDIA_URL = env('RAILWAY_MEDIA_URL', default=MEDIA_URL)
+# Render specific environment variables
+RENDER_STATIC_URL = env('RENDER_STATIC_URL', default=STATIC_URL)
+RENDER_MEDIA_URL = env('RENDER_MEDIA_URL', default=MEDIA_URL)
 
-# Media file serving configuration for Railway
-if 'RAILWAY_ENVIRONMENT' in os.environ:
-    # In Railway production, keep media URLs simple and relative
-    # DO NOT use Railway-provided URLs as they cause domain path issues
+# Media file serving configuration for Render
+if 'RENDER' in os.environ:
+    # In Render production, keep media URLs simple and relative
+    # Render handles static files via WhiteNoise and direct serving
     STATIC_URL = '/static/'
     MEDIA_URL = '/media/'
     
-    # Add media URL patterns to urlconf for Railway
+    # Add media URL patterns to urlconf for Render
     from django.conf import settings
     from django.conf.urls.static import static
     
-    print(f"🚀 Railway production media config:")
+    print(f"🚀 Render production media config:")
     print(f"   STATIC_URL: {STATIC_URL}")
     print(f"   MEDIA_URL: {MEDIA_URL}")
     print(f"   STATIC_ROOT: {STATIC_ROOT}")

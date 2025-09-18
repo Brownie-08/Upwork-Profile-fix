@@ -7,16 +7,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeNotifications() {
     const notificationsList = document.getElementById('notificationsList');
     const notificationCount = document.getElementById('notificationCount');
-    const ws = new WebSocket(
-        `ws://${window.location.host}/ws/notifications/`
-    );
-    
-    ws.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        if (data.type === 'notification_update') {
-            updateNotifications(data.notifications);
-        }
-    };
+    // WebSocket temporarily disabled for Render deployment
+    // TODO: Configure Django Channels + ASGI for WebSocket support
+    // const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // const ws = new WebSocket(
+    //     `${protocol}//${window.location.host}/ws/notifications/`
+    // );
+    // 
+    // ws.onmessage = function(e) {
+    //     const data = JSON.parse(e.data);
+    //     if (data.type === 'notification_update') {
+    //         updateNotifications(data.notifications);
+    //     }
+    // };
 
     // Initial load
     fetchNotifications();
