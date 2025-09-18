@@ -43,20 +43,23 @@ DEBUG = env.bool("DEBUG", default=False)
 
 # Production environment detection - needed early in settings
 is_production = (
-    'RAILWAY_ENVIRONMENT' in os.environ or 
-    'RAILWAY_SERVICE_NAME' in os.environ or
-    'RAILWAY_DOMAIN' in os.environ or
-    os.environ.get('DEBUG', '').lower() == 'false'
+    'RENDER' in os.environ or 
+    'RENDER_SERVICE_NAME' in os.environ or
+    os.environ.get('DEBUG', '').lower() == 'false' or
+    os.environ.get('RENDER_EXTERNAL_HOSTNAME') is not None
 )
 
 ALLOWED_HOSTS = [
-    h.strip() for h in env("ALLOWED_HOSTS", default="127.0.0.1,localhost,.railway.app").split(",")
+    h.strip() for h in env("ALLOWED_HOSTS", default="127.0.0.1,localhost,.onrender.com").split(",")
 ]
 
-# Railway deployment settings
-if 'RAILWAY_ENVIRONMENT' in os.environ:
+# Render deployment settings
+if 'RENDER' in os.environ:
     DEBUG = False
-    ALLOWED_HOSTS.append('.railway.app')
+    ALLOWED_HOSTS.append('.onrender.com')
+    # Add Render external hostname if available
+    if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+        ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
 SITE_URL = env("SITE_URL", default="http://127.0.0.1:8000")
 
 
@@ -146,9 +149,9 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-# Database configuration for Railway PostgreSQL
+# Database configuration for Render PostgreSQL
 if 'DATABASE_URL' in os.environ:
-    # Railway PostgreSQL configuration
+    # Render PostgreSQL configuration
     DATABASES = {
         'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
     }
@@ -315,8 +318,8 @@ RESEND_API_KEY = env("RESEND_API_KEY", default="")
 
 # Email backend configuration - GMAIL SMTP FIRST
 if is_production:
-    # Railway/Production environment - PRIORITIZE Gmail SMTP
-    email_logger.info(f"🚀 Production environment detected: Railway={('RAILWAY_ENVIRONMENT' in os.environ)}")
+    # Render/Production environment - PRIORITIZE Gmail SMTP
+    email_logger.info(f"🚀 Production environment detected: Render={('RENDER' in os.environ)}")
     
     # Option 1: Gmail SMTP (Primary choice)
     if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
@@ -346,11 +349,11 @@ if is_production:
         print("😨 CRITICAL ERROR: No email service configured!")
         print("Users will NOT receive OTP codes - registration will fail!")
         print("")
-        print("📧 Required Gmail SMTP variables for Railway:")
+        print("📧 Required Gmail SMTP variables for Render:")
         print("- EMAIL_HOST_USER=udohpeterbrown@gmail.com")
         print("- EMAIL_HOST_PASSWORD=fdac hcuq libc ctsb")
         print("- DEFAULT_FROM_EMAIL=udohpeterbrown@gmail.com")
-        print(f"🔍 Environment check: RAILWAY_ENVIRONMENT={('RAILWAY_ENVIRONMENT' in os.environ)}")
+        print(f"🔍 Environment check: RENDER={('RENDER' in os.environ)}")
         # Use console as fallback to prevent total failure
         EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
