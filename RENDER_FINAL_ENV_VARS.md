@@ -45,6 +45,14 @@ Copy and paste these exact values into your Render service environment:
 | `SITE_URL` | `https://upwork-profile-fix.onrender.com` |
 | `MEDIA_URL` | `/media/` |
 
+### 📁 **Cloudinary Media Storage (NEW - CRITICAL)**
+
+| Variable Name | Value |
+|---------------|--------|
+| `CLOUDINARY_CLOUD_NAME` | `de9i7id2b` |
+| `CLOUDINARY_API_KEY` | `547248818221456` |
+| `CLOUDINARY_API_SECRET` | `611drBROvgh5Bkip4HZYaLRoddI` |
+
 ## 🔧 **How CSRF Will Now Work**
 
 1. **Your domain** `https://upwork-profile-fix.onrender.com` is now explicitly trusted
@@ -59,20 +67,24 @@ Copy and paste these exact values into your Render service environment:
 3. **Redeploy** your service (should happen automatically)
 4. **Test** document uploads and experience forms
 
-## 🎯 **Test These After Setting Environment Variable**
+## 🎯 **Test These After Setting Environment Variables**
 
 ✅ **User Registration** → OTP emails should work  
 ✅ **Upload Face Photo** → Should work without CSRF errors  
 ✅ **Add Work Experience** → Should save successfully  
 ✅ **Upload ID Documents** → Should work without 403 errors  
 ✅ **Upload Profile Files** → Should work without CSRF errors  
+✅ **Portfolio Images** → Should persist across redeploys (Cloudinary)
+✅ **Profile Pictures** → Should load correctly from Cloudinary CDN
 
 ## 📝 **Expected Results**
 
 - No more `403 Forbidden (CSRF token from POST incorrect)` errors
 - No more `/ws/notifications/` 404 errors in browser console
+- No more `Not Found: /media/portfolio/user_x/images/<filename>.png` errors
 - All file uploads and form submissions working properly
 - Gmail SMTP emails working for OTP verification
+- **Persistent media storage**: Images survive redeploys and load from Cloudinary CDN
 
 ---
 

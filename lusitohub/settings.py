@@ -73,6 +73,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Cloudinary for media file storage
+    "cloudinary_storage",
+    "cloudinary",
+    # Local apps
     "core",
     "profiles",
     "notifications",
@@ -281,11 +285,30 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
-# Media files configuration
-MEDIA_URL = env("MEDIA_URL", default="/media/")
-MEDIA_ROOT = BASE_DIR / "media"
+# Cloudinary Configuration for Production Media Storage
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
 
-# Whitenoise configuration for Railway static files
+# Media files configuration
+if is_production and CLOUDINARY_STORAGE['CLOUD_NAME']:
+    # Use Cloudinary for media storage in production
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    MEDIA_URL = '/media/'  # Cloudinary will handle the actual URLs
+    print(f"📁 Using Cloudinary for media storage: {CLOUDINARY_STORAGE['CLOUD_NAME']}")
+else:
+    # Local development - use local media files
+    MEDIA_URL = env("MEDIA_URL", default="/media/")
+    MEDIA_ROOT = BASE_DIR / "media"
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    if not is_production:
+        print("💻 Using local file storage for development")
+    else:
+        print("⚠️ Production mode but Cloudinary not configured - using local storage")
+
+# Whitenoise configuration for static files
 if is_production:
     # Use WhiteNoise for static files in production
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

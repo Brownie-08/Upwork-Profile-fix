@@ -5,6 +5,8 @@ certifi
 channels
 channels-redis
 charset-normalizer
+cloudinary
+django-cloudinary-storage
 crispy-bootstrap4
 crispy-tailwind
 dj-database-url
