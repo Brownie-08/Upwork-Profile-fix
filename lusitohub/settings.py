@@ -594,6 +594,7 @@ if not DEBUG:
     CSRF_TRUSTED_ORIGINS = [
         'https://*.onrender.com',
         'https://*.render.com',
+        'https://upwork-profile-fix.onrender.com',  # Your specific deployed domain
     ]
     
     # Add specific Render domain if available
