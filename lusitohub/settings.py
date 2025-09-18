@@ -296,71 +296,72 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 LOGIN_REDIRECT_URL = "home"
 LOGIN_URL = "login"
 
-# Email Configuration  
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@lusitohub.com")
+# Email Configuration - PRIORITIZE GMAIL SMTP
+import logging
+email_logger = logging.getLogger('email_backend')
 
-# Railway-compatible email settings
-# Option 1: Resend (Recommended for Railway)
-RESEND_API_KEY = env("RESEND_API_KEY", default="")
-
-# Option 2: Gmail SMTP (may be blocked by Railway)
+# Gmail SMTP Configuration (Primary)
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
-EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)  # Reduced timeout for production
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=30)  # Increased timeout for Gmail
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "noreply@lusitohub.com")
 
-# Email backend configuration - PRODUCTION REQUIRES REAL EMAIL DELIVERY
+# Resend API (Fallback only)
+RESEND_API_KEY = env("RESEND_API_KEY", default="")
+
+# Email backend configuration - GMAIL SMTP FIRST
 if is_production:
-    # Railway/Production environment - Try multiple email services
+    # Railway/Production environment - PRIORITIZE Gmail SMTP
+    email_logger.info(f"🚀 Production environment detected: Railway={('RAILWAY_ENVIRONMENT' in os.environ)}")
     
-    # Option 1: Try Resend API (Railway-friendly)
-    if RESEND_API_KEY:
+    # Option 1: Gmail SMTP (Primary choice)
+    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+        EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+        email_logger.info(f"📧 Production Gmail SMTP configured: {EMAIL_HOST_USER}")
+        email_logger.info(f"📧 Gmail SMTP Settings:")
+        email_logger.info(f"   HOST: {EMAIL_HOST}:{EMAIL_PORT}")
+        email_logger.info(f"   TLS: {EMAIL_USE_TLS}")
+        email_logger.info(f"   FROM: {DEFAULT_FROM_EMAIL}")
+        print(f"✅ Gmail SMTP configured for {EMAIL_HOST_USER}")
+        print(f"📧 OTP emails will be sent via Gmail")
+    
+    # Option 2: Resend API (Fallback)
+    elif RESEND_API_KEY:
         try:
             import requests
             EMAIL_BACKEND = "profiles.email_backends.ResendEmailBackend"
-            print(f"📧 Production Resend API configured")
-            print("✅ Users will receive OTP codes via Resend")
-            print(f"🚀 Production environment detected: Railway={('RAILWAY_ENVIRONMENT' in os.environ)}")
+            email_logger.info(f"📧 Fallback: Using Resend API")
+            print(f"📧 Fallback: Using Resend API")
         except ImportError:
-            print("⚠️ Resend API key provided but 'requests' library not available")
-            RESEND_API_KEY = ""  # Fall through to SMTP
+            email_logger.error("⚠️ Resend API key provided but 'requests' library not available")
+            EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     
-    # Option 2: Try Gmail SMTP (may be blocked by Railway)
-    if not RESEND_API_KEY and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-        EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-        print(f"📧 Production SMTP configured: {EMAIL_HOST_USER}")
-        print("⚠️ WARNING: Railway may block Gmail SMTP connections")
-        print("✅ Users will receive OTP codes if SMTP is allowed")
-        print(f"🚀 Production environment detected: Railway={('RAILWAY_ENVIRONMENT' in os.environ)}")
-    
-    # No email service configured
-    elif not RESEND_API_KEY and not (EMAIL_HOST_USER and EMAIL_HOST_PASSWORD):
+    # Option 3: No email service configured (Error)
+    else:
+        email_logger.error("😨 CRITICAL ERROR: No email service configured!")
         print("😨 CRITICAL ERROR: No email service configured!")
         print("Users will NOT receive OTP codes - registration will fail!")
         print("")
-        print("🚀 RECOMMENDED: Use Resend for Railway (free tier available):")
-        print("1. Go to https://resend.com and create account")
-        print("2. Get API key from dashboard")
-        print("3. Set Railway environment variable: RESEND_API_KEY=your_api_key")
-        print("")
-        print("📧 Alternative: Gmail SMTP (may not work on Railway):")
-        print("- EMAIL_HOST_USER=your-email@gmail.com")
-        print("- EMAIL_HOST_PASSWORD=your-app-password")
-        print("- DEFAULT_FROM_EMAIL=your-email@gmail.com")
+        print("📧 Required Gmail SMTP variables for Railway:")
+        print("- EMAIL_HOST_USER=udohpeterbrown@gmail.com")
+        print("- EMAIL_HOST_PASSWORD=fdac hcuq libc ctsb")
+        print("- DEFAULT_FROM_EMAIL=udohpeterbrown@gmail.com")
         print(f"🔍 Environment check: RAILWAY_ENVIRONMENT={('RAILWAY_ENVIRONMENT' in os.environ)}")
         # Use console as fallback to prevent total failure
         EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
     # Local development environment
-    EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
     if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
         EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-        print("📧 Development SMTP configured - real emails will be sent")
+        email_logger.info(f"📧 Development Gmail SMTP configured: {EMAIL_HOST_USER}")
+        print(f"📧 Development Gmail SMTP configured - real emails will be sent to {EMAIL_HOST_USER}")
     else:
-        EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+        EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+        email_logger.info("💻 Local development - using console email backend")
         print("💻 Local development - using console email backend")
 
 # Jazzmin Admin Dashboard Configuration

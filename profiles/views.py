@@ -119,26 +119,57 @@ def register(request):
 
             # Create OTP for account verification (email + SMS if available)
             channel = "BOTH" if profile.phone_number else "EMAIL"
+            
+            # Enhanced logging for OTP creation attempt
+            logger.info(f"Creating OTP for user {user.username} ({user.email}) via {channel}")
+            logger.info(f"User phone: {profile.phone_number or 'None'}")
+            
             otp = OTPService.create_otp(user, "VERIFY", channel)
 
             if otp:
                 # Store user ID in session for verification process
                 request.session["otp_user_id"] = user.id
+                logger.info(f"✅ OTP {otp.code} created successfully for {user.username}")
+                logger.info(f"🔗 Redirecting {user.username} to verify_account page")
+                
                 messages.success(
                     request,
                     "Account created successfully! Please check your email for a verification code.",
                 )
-                logger.info(
-                    f"User {user.username} registered, OTP {otp.code} sent to {user.email}"
-                )
+                
+                # Log successful registration attempt
+                logger.info(f"User {user.username} registered successfully, redirecting to OTP verification")
                 return redirect("profiles:verify_account")
             else:
-                messages.error(
-                    request, "Error sending verification code. Please try again later."
+                # Enhanced error logging for failed OTP creation
+                import os
+                is_production = (
+                    'RAILWAY_ENVIRONMENT' in os.environ or 
+                    'RAILWAY_SERVICE_NAME' in os.environ or
+                    'RAILWAY_DOMAIN' in os.environ or
+                    os.environ.get('DEBUG', '').lower() == 'false'
                 )
-                logger.error(
-                    f"Failed to create OTP for {user.email} during registration"
-                )
+                
+                logger.error(f"❌ CRITICAL: Failed to create OTP for {user.email} during registration")
+                logger.error(f"Environment: {'PRODUCTION' if is_production else 'DEVELOPMENT'}")
+                logger.error(f"Email backend: {getattr(settings, 'EMAIL_BACKEND', 'NOT SET')}")
+                logger.error(f"Email host user: {getattr(settings, 'EMAIL_HOST_USER', 'NOT SET')}")
+                
+                if is_production:
+                    logger.error(f"😨 PRODUCTION: Registration failed for {user.username} - email delivery failed")
+                    logger.error("User will need to try again after email credentials are fixed")
+                    
+                    messages.error(
+                        request, 
+                        "We're experiencing email delivery issues. Please try again in a few minutes or contact support if the problem persists."
+                    )
+                else:
+                    messages.error(
+                        request, 
+                        "Error sending verification code. Please check the console logs and try again."
+                    )
+                
+                logger.error(f"🗑️ Deleting user {user.username} due to OTP failure")
                 user.delete()
                 return redirect("profiles:register")
         else:
