@@ -671,4 +671,8 @@ if 'RENDER' in os.environ:
     print(f"   STATIC_URL: {STATIC_URL}")
     print(f"   MEDIA_URL: {MEDIA_URL}")
     print(f"   STATIC_ROOT: {STATIC_ROOT}")
-    print(f"   MEDIA_ROOT: {MEDIA_ROOT}")
+    # MEDIA_ROOT only exists when using local file storage
+    if hasattr(settings, 'MEDIA_ROOT') or 'MEDIA_ROOT' in globals():
+        print(f"   MEDIA_ROOT: {globals().get('MEDIA_ROOT', 'Not defined - using Cloudinary')}")
+    else:
+        print(f"   MEDIA_ROOT: Not defined - using Cloudinary CDN")
