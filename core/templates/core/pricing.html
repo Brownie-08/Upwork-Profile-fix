@@ -1,0 +1,140 @@
+{% extends "core/base.html" %}
+{% block title %}Pricing & Charges{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 mb-3">Pricing & Charges</h1>
+        <p class="lead text-muted">Transparent pricing for all your freelancing needs</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="pricing-content">
+        <!-- Employer Fees -->
+        <section class="pricing-section mb-5">
+            <div class="section-header d-flex align-items-center mb-4">
+                <i class="fas fa-building me-3 text-primary" style="font-size: 24px;"></i>
+                <h2 class="m-0">Fees for Employers</h2>
+            </div>
+            
+            <div class="pricing-grid">
+                <div class="pricing-item p-4 bg-white shadow-sm rounded-lg mb-4">
+                    <h3 class="text-primary mb-3">Projects</h3>
+                    <div class="highlight-box mb-3 p-3 bg-light rounded">
+                        <strong>3%</strong> fee on fixed & hourly projects
+                    </div>
+                    <ul class="list-unstyled">
+                        <li class="mb-2 d-flex">
+                            <i class="fas fa-check text-success me-2 mt-1"></i>
+                            <span>Free signup, posting, and bid management</span>
+                        </li>
+                        <li class="mb-2 d-flex">
+                            <i class="fas fa-check text-success me-2 mt-1"></i>
+                            <span>Full refund available within 7 days of acceptance</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="pricing-item p-4 bg-white shadow-sm rounded-lg mb-4">
+                    <h3 class="text-primary mb-3">Contests</h3>
+                    <div class="highlight-box mb-3 p-3 bg-light rounded">
+                        <strong>No fee</strong> for posting or awarding
+                    </div>
+                    <ul class="list-unstyled">
+                        <li class="mb-2 d-flex">
+                            <i class="fas fa-check text-success me-2 mt-1"></i>
+                            <span>30-day Money Back Guarantee</span>
+                        </li>
+                        <li class="mb-2 d-flex">
+                            <i class="fas fa-check text-success me-2 mt-1"></i>
+                            <span>Upfront prize funding required</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Freelancer Fees -->
+        <section class="pricing-section mb-5">
+            <div class="section-header d-flex align-items-center mb-4">
+                <i class="fas fa-user-tie me-3 text-primary" style="font-size: 24px;"></i>
+                <h2 class="m-0">Fees for Freelancers</h2>
+            </div>
+
+            <div class="pricing-grid">
+                <div class="pricing-item p-4 bg-white shadow-sm rounded-lg mb-4">
+                    <h3 class="text-primary mb-3">Project Fees</h3>
+                    <div class="fee-grid mb-3">
+                        <div class="p-3 bg-light rounded text-center">
+                            <div class="h4 mb-0">8%</div>
+                            <small>Fixed Price Projects</small>
+                        </div>
+                        <div class="p-3 bg-light rounded text-center">
+                            <div class="h4 mb-0">10%</div>
+                            <small>Hourly Projects</small>
+                        </div>
+                    </div>
+                    <div class="text-muted">
+                        <small>* Free signup with 20 bids per month</small>
+                    </div>
+                </div>
+
+                <div class="pricing-item p-4 bg-white shadow-sm rounded-lg mb-4">
+                    <h3 class="text-primary mb-3">Verification</h3>
+                    <div class="highlight-box mb-3 p-3 bg-light rounded">
+                        <strong>E10/month</strong> for Verified Badge
+                    </div>
+                    <p class="text-muted mb-0">
+                        <small>Subject to approval process. Non-refundable application fee.</small>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Withdrawal Fees -->
+        <section class="pricing-section mb-5">
+            <div class="section-header d-flex align-items-center mb-4">
+                <i class="fas fa-wallet me-3 text-primary" style="font-size: 24px;"></i>
+                <h2 class="m-0">Withdrawal Fees</h2>
+            </div>
+
+            <div class="table-responsive bg-white shadow-sm rounded-lg">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="border-0">Payment Method</th>
+                            <th class="border-0 text-end">Fee (E)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>MTN Mobile Money</td>
+                            <td class="text-end">5</td>
+                        </tr>
+                        <tr>
+                            <td>Standard Bank Unayo</td>
+                            <td class="text-end">10</td>
+                        </tr>
+                        <tr>
+                            <td>Debit/Credit Card (Visa)</td>
+                            <td class="text-end">20</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Other Fees Notice -->
+        <section class="pricing-section">
+            <div class="alert alert-info d-flex align-items-center" role="alert">
+                <i class="fas fa-info-circle me-3"></i>
+                <div>
+                    <strong>Important:</strong> All transactions are subject to 14% VAT as per Eswatini Revenue Authority rates.
+                    Offsiting violations incur a 30% fee of the project budget.
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chat System{% endblock %}</title>
+</head>
+<body>
+    <div class="chat-container">
+        <nav class="chat-nav">
+            <div class="user-info">
+                <img src="{{ request.user.profile.profile_picture.url %}' }}" alt="Profile">
+                <span>{{ request.user.profile.first_name }} {{ request.user.profile.last_name }}</span>
+            </div>
+            <div class="nav-links">
+                <a href="{% url 'chat:chatroom_list' %}" class="nav-link">Messages</a>
+            </div>
+        </nav>
+
+        <main class="chat-main">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

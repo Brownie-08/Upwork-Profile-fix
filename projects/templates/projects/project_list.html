@@ -1,0 +1,173 @@
+{% extends "core/base.html" %}
+{% block title %}Browse Jobs{% endblock %}
+
+{% block content %}
+<div class="project-list-container">
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form class="search-form" method="GET">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search projects..." 
+                           value="{{ request.GET.search }}">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" name="sort" onchange="this.form.submit()">
+                <option value="latest" {% if sort_by == 'latest' %}selected{% endif %}>Latest First</option>
+                <option value="budget_high" {% if sort_by == 'budget_high' %}selected{% endif %}>Highest Budget</option>
+                <option value="budget_low" {% if sort_by == 'budget_low' %}selected{% endif %}>Lowest Budget</option>
+                <option value="deadline" {% if sort_by == 'deadline' %}selected{% endif %}>Closest Deadline</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="filter-tags">
+                {% for category in categories %}
+                    <button class="btn btn-outline-secondary btn-sm me-2 mb-2 {% if category.id in selected_categories %}active{% endif %}"
+                            onclick="toggleFilter('category', '{{ category.id }}')">
+                        {{ category.name }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="row">
+        {% for project in projects %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card project-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title mb-0">{{ project.title }}</h5>
+                            <span class="badge {% if project.status == 'OPEN' %}bg-success{% elif project.status == 'IN_PROGRESS' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                {{ project.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <p class="card-text text-muted mb-3">{{ project.description|truncatewords:30 }}</p>
+                        
+                        <div class="project-details">
+                            <div class="detail-item mb-2">
+                                <i class="fas fa-money-bill text-success"></i>
+                                <span class="ms-2">${{ project.budget|floatformat:2 }}</span>
+                            </div>
+                            <div class="detail-item mb-2">
+                                <i class="fas fa-calendar-alt text-primary"></i>
+                                <span class="ms-2">Due: {{ project.deadline|date:"M d, Y" }}</span>
+                            </div>
+                            <div class="detail-item mb-2">
+                                <i class="fas fa-user text-info"></i>
+                                <span class="ms-2">{{ project.client.username }}</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-file-alt text-warning"></i>
+                                <span class="ms-2">{{ project.proposals.count }} proposals</span>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="project-categories mb-3">
+                            {% for category in project.categories.all %}
+                                <span class="badge bg-light text-dark me-1">{{ category.name }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Posted {{ project.created_at|timesince }} ago</small>
+                            <a href="{% url 'project-detail' project.pk %}" class="btn btn-primary btn-sm">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No jobs found matching your criteria.
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+        <nav aria-label="Project pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+<script>
+    function toggleFilter(type, value) {
+        let url = new URL(window.location.href);
+        let params = new URLSearchParams(url.search);
+        let currentValues = params.get(type) ? params.get(type).split(',') : [];
+        
+        if (currentValues.includes(value)) {
+            currentValues = currentValues.filter(v => v !== value);
+        } else {
+            currentValues.push(value);
+        }
+        
+        if (currentValues.length > 0) {
+            params.set(type, currentValues.join(','));
+        } else {
+            params.delete(type);
+        }
+        
+        url.search = params.toString();
+        window.location.href = url.toString();
+    }
+</script>
+{% endblock %}

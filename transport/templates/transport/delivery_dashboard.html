@@ -1,0 +1,152 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Taxi & Delivery Services</h2>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'create_delivery_job' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Post New Job
+                    </a>
+                {% endif %}
+            </div>
+            
+            {% if messages %}
+            <div class="messages mb-4">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if not user.profile.is_verified and user.profile.account_type in 'TAXI,DELIVERY' %}
+                <div class="alert alert-warning mb-4">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Your account needs to be verified before you can provide services.
+                    <a href="{% url 'profile' %}">Complete verification</a>
+                </div>
+            {% endif %}
+            
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-4" id="deliveryTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="taxi-tab" data-bs-toggle="tab" href="#taxi" role="tab">
+                        <i class="fas fa-taxi"></i> Taxi Services
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="delivery-tab" data-bs-toggle="tab" href="#delivery" role="tab">
+                        <i class="fas fa-truck"></i> Delivery Services
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Tab Content -->
+            <div class="tab-content" id="deliveryTabContent">
+                <!-- Taxi Tab -->
+                <div class="tab-pane fade show active" id="taxi" role="tabpanel">
+                    <div class="row">
+                        {% for job in taxi_jobs %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title">{{ job.pickup_location }} → {{ job.dropoff_location }}</h5>
+                                        <span class="badge {% if job.is_urgent %}bg-danger{% else %}bg-primary{% endif %}">
+                                            {% if job.is_urgent %}Urgent{% endif %}
+                                            E{{ job.budget }}
+                                        </span>
+                                    </div>
+                                    <p class="card-text">{{ job.description|truncatewords:20 }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="far fa-clock"></i> {{ job.created_at|timesince }} ago
+                                        </small>
+                                        {% if job.estimated_time %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-hourglass-half"></i> ~{{ job.estimated_time }}min
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <a href="{% url 'delivery_job_detail' job.id %}" class="btn btn-outline-primary w-100">
+                                        View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <div class="alert alert-info text-center">
+                                No taxi jobs available at the moment.
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Delivery Tab -->
+                <div class="tab-pane fade" id="delivery" role="tabpanel">
+                    <div class="row">
+                        {% for job in delivery_jobs %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title">{{ job.pickup_location }} → {{ job.dropoff_location }}</h5>
+                                        <span class="badge {% if job.is_urgent %}bg-danger{% else %}bg-primary{% endif %}">
+                                            {% if job.is_urgent %}Urgent{% endif %}
+                                            E{{ job.budget }}
+                                        </span>
+                                    </div>
+                                    <p class="card-text">{{ job.description|truncatewords:20 }}</p>
+                                    {% if job.package_size or job.weight %}
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            {% if job.package_size %}
+                                                <i class="fas fa-box"></i> {{ job.get_package_size_display }}
+                                            {% endif %}
+                                            {% if job.weight %}
+                                                <i class="fas fa-weight"></i> {{ job.weight }}kg
+                                            {% endif %}
+                                        </small>
+                                    </p>
+                                    {% endif %}
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="far fa-clock"></i> {{ job.created_at|timesince }} ago
+                                        </small>
+                                        {% if job.estimated_time %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-hourglass-half"></i> ~{{ job.estimated_time }}min
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <a href="{% url 'delivery_job_detail' job.id %}" class="btn btn-outline-primary w-100">
+                                        View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <div class="alert alert-info text-center">
+                                No delivery jobs available at the moment.
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

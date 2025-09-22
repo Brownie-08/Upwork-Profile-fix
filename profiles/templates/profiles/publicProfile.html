@@ -1,0 +1,135 @@
+{% extends "core/base.html" %}
+{% block title %}{{ viewed_user.get_full_name|default:viewed_user.username }}'s Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Profile Header -->
+    <div class="row">
+        <div class="col-md-4 text-center">
+            <img src="{{ profile.profile_picture.url }}" 
+                 alt="Profile Picture" 
+                 class="rounded-circle img-fluid mb-3"
+                 style="max-width: 200px;">
+        </div>
+        <div class="col-md-8">
+            <h2>{{ profile.first_name }} {{ profile.middle_name }} {{ profile.last_name }}</h2>
+            <h4 class="text-muted">{{ profile.title }}</h4>
+            
+            {% if is_own_profile %}
+            <a href="{% url 'edit-profile' %}" class="btn btn-primary mb-3">
+                <i class="fas fa-edit"></i> Edit Profile
+            </a>
+            {% endif %}
+            
+            <div class="mb-3">
+                <i class="fas fa-map-marker-alt"></i> {{ profile.location }}
+                {% if profile.languages %}
+                <span class="ms-3"><i class="fas fa-language"></i> {{ profile.languages }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <h5>Hourly Rate: E {{ profile.hourly_rate }}/hr</h5>
+                <div class="text-muted">
+                    Success Rate: {{ profile.success_rate }}% | 
+                    Total Projects: {{ profile.total_projects }} |
+                    Years of Experience: {{ profile.years_of_experience }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>About</h3>
+        </div>
+        <div class="card-body">
+            <p>{{ profile.bio }}</p>
+            {% if profile.skills %}
+            <h5>Skills</h5>
+            <p>{{ profile.skills }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Experience Section -->
+    {% if experiences %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Experience</h3>
+        </div>
+        <div class="card-body">
+            {% for exp in experiences %}
+            <div class="mb-4">
+                <h5>{{ exp.title }} at {{ exp.company }}</h5>
+                <p class="text-muted">
+                    {{ exp.start_date|date:"M Y" }} - 
+                    {% if exp.current %}Present{% else %}{{ exp.end_date|date:"M Y" }}{% endif %}
+                </p>
+                <p>{{ exp.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Education Section -->
+    {% if education %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Education</h3>
+        </div>
+        <div class="card-body">
+            {% for edu in education %}
+            <div class="mb-4">
+                <h5>{{ edu.degree }} in {{ edu.field_of_study }}</h5>
+                <h6>{{ edu.institution }}</h6>
+                <p class="text-muted">
+                    {{ edu.start_date|date:"M Y" }} - 
+                    {% if edu.current %}Present{% else %}{{ edu.end_date|date:"M Y" }}{% endif %}
+                </p>
+                {% if edu.description %}
+                <p>{{ edu.description }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Portfolio Section -->
+    {% if portfolio_items %}
+    <div class="card mt-4 mb-4">
+        <div class="card-header">
+            <h3>Portfolio</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for item in portfolio_items %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if item.image %}
+                        <img src="{{ item.image.url }}" class="card-img-top" alt="{{ item.title }}">
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.title }}</h5>
+                            <p class="card-text">{{ item.description }}</p>
+                            {% if item.project_url %}
+                            <a href="{{ item.project_url }}" class="btn btn-primary" target="_blank">
+                                View Project
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer text-muted">
+                            Completed: {{ item.completion_date|date:"M Y" }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

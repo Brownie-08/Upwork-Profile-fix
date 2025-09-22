@@ -1,0 +1,38 @@
+<div class="border rounded-lg p-4 hover:bg-gray-50 {% if bid.driver == user %}border-blue-200{% endif %}">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <p class="text-gray-600">Driver</p>
+            <p class="font-medium">{{ bid.driver.get_full_name }}</p>
+        </div>
+        <div>
+            <p class="text-gray-600">Amount</p>
+            <p class="font-medium">E{{ bid.amount }}</p>
+        </div>
+        <div>
+            <p class="text-gray-600">Estimated PickUp Time</p>
+            <p class="font-medium">{{ bid.estimated_arrival_time }}</p>
+        </div>
+        <div>
+            <p class="text-gray-600">Submitted</p>
+            <p class="font-medium">{{ bid.created_at|timesince }} ago</p>
+        </div>
+        {% if bid.extra_information %}
+        <div class="col-span-full">
+            <p class="text-gray-600">Additional Information</p>
+            <p class="font-medium">{{ bid.extra_information }}</p>
+        </div>
+        {% endif %}
+        
+        {% if request.customer == user and request.status == 'open' %}
+        <div class="col-span-full flex justify-end">
+            <form method="post" action="{% url 'accept_bid' bid.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" 
+                        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Accept Bid
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>

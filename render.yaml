@@ -1,0 +1,44 @@
+# render.yaml - Render deployment configuration
+# This file can be used to deploy your entire stack with one click
+
+services:
+  # Web Service (Django App)
+  - type: web
+    name: lusitohub-app
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn lusitohub.wsgi:application"
+    plan: starter
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SETTINGS_MODULE
+        value: "lusitohub.settings"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: EMAIL_HOST
+        value: "smtp.gmail.com"
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_USE_SSL
+        value: "False"
+      - key: EMAIL_TIMEOUT
+        value: "30"
+
+databases:
+  # PostgreSQL Database
+  - name: lusitohub-db
+    databaseName: lusitohub
+    user: lusitohub_user
+    plan: starter
+
+# Note: You'll still need to manually set sensitive environment variables:
+# - SECRET_KEY
+# - DATABASE_URL (auto-generated after database creation)
+# - EMAIL_HOST_USER
+# - EMAIL_HOST_PASSWORD
+# - Google Maps API keys
+# - Admin credentials (optional)
+# - MTN MoMo credentials (if using)

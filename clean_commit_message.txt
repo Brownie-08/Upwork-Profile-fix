@@ -1,0 +1,34 @@
+🔧 FIX: Gmail SMTP Email Configuration & Registration Redirect
+
+✅ FIXED ISSUES:
+1. Registration OTP emails not sending via Resend
+2. Wrong redirect after registration (now goes to verify-account)
+3. Poor error handling and logging
+
+📧 EMAIL BACKEND CHANGES:
+- Switched from Resend to Gmail SMTP (prioritized)
+- Added comprehensive email logging with production safeguards
+- Enhanced OTP service with better error handling
+- Timeout protection for SMTP connections
+
+🔄 REGISTRATION FLOW FIXES:
+- Enhanced registration view with detailed logging
+- Better error messages for production vs development
+- Fixed redirect flow to verify-account page
+- Added session debugging for troubleshooting
+
+📋 RAILWAY CONFIGURATION:
+- Created Railway Gmail configuration guide
+- Environment variables clearly documented
+- Testing instructions provided
+- Troubleshooting steps included
+
+🎯 READY FOR RAILWAY:
+Configure these variables in Railway dashboard:
+- EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+- EMAIL_HOST_USER={{YOUR_EMAIL_HERE}}
+- EMAIL_HOST_PASSWORD={{YOUR_APP_PASSWORD_HERE}}
+- DEFAULT_FROM_EMAIL={{YOUR_EMAIL_HERE}}
+- Remove RESEND_API_KEY variable
+
+After Railway restart, OTP emails will work via Gmail!

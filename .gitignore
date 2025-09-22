@@ -1,0 +1,38 @@
+# Virtual environment
+.env
+.env.local
+.env.production
+.env.*
+*.env
+.env.railway
+venv/
+lusito_env/
+staticfiles/
+media/
+debug.log
+db.sqlite3
+
+# Admin credentials (never commit these)
+admin_credentials.txt
+credentials.txt
+*.credentials
+
+# Security keys
+*.key
+*.pem
+*.secret
+
+# Environment and configuration files
+.env.example.local
+.env.development
+.env.testing
+.env.staging
+.env.production.local
+config.ini
+secrets.json
+api_keys.txt
+
+# Platform-specific environment files
+.env.heroku
+.env.vercel
+.env.netlify

@@ -1,0 +1,176 @@
+{% extends "core/base.html" %}
+{% block title %}Withdraw Funds via MTN MoMo{% endblock %}
+
+{% block content %}
+<style>
+    .withdraw-container {
+        padding: 2rem 0;
+    }
+    .withdraw-card {
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .withdraw-card .card-header {
+        background: linear-gradient(135deg, #dc3545, #ff6b6b);
+        color: white;
+        border-bottom: none;
+        padding: 1.5rem;
+    }
+    .balance-badge {
+        background-color: #ffffff;
+        color: #333;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+    .withdraw-card .card-body {
+        padding: 2rem;
+    }
+    .input-group-text {
+        background-color: #f4f4f4;
+        border-right: none;
+    }
+    .form-control {
+        border-left: none;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .form-control:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    .btn-primary {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+    }
+    .btn-primary:hover {
+        background-color: #c82333;
+        border-color: #c82333;
+    }
+    .alert-info {
+        background-color: #e9f7fe;
+        border-color: #b3e0f9;
+        color: #31708f;
+    }
+    .form-check-label {
+        font-size: 0.95rem;
+    }
+</style>
+
+<div class="withdraw-container">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card withdraw-card">
+                <div class="card-header">
+                    <h3 class="mb-0">Withdraw Funds via MTN Mobile Money</h3>
+                    <div class="balance-badge">Available Balance: E{{ user.wallet.balance|floatformat:2 }}</div>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} mb-3">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    <form id="withdraw-form" action="{% url 'wallets:momo_withdrawal' %}" method="POST" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Amount to Withdraw (E)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">E</span>
+                                <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0.01"
+                                       max="{{ wallet.balance|floatformat:2 }}" required>
+                                <div class="invalid-feedback">Please enter a valid amount (minimum E0.01, maximum E{{ wallet.balance|floatformat:2 }}).</div>
+                            </div>
+                            <div class="form-text">A E5.00 withdrawal fee will be applied. Maximum: E{{ wallet.balance|floatformat:2 }}.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Mobile Money Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text">+268</span>
+                                <input type="tel" class="form-control" id="phone_number" name="phone_number" required
+                                       pattern="\+2687[0-9]{7}" placeholder="76012345" maxlength="12">
+                                <div class="invalid-feedback">Please enter a valid Swaziland number (e.g., +26876012345).</div>
+                            </div>
+                            <div class="form-text">Enter your Swaziland MTN MoMo number starting with +268 followed by 8 digits.</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirm_number" required>
+                                <label class="form-check-label" for="confirm_number">
+                                    I confirm that the mobile number is correct and registered with MTN Mobile Money.
+                                </label>
+                                <div class="invalid-feedback">Please confirm the mobile number.</div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mb-3">
+                            <small>
+                                <strong>Important Information:</strong>
+                                <ol class="mb-0 mt-2">
+                                    <li>Minimum withdrawal: E0.01 (plus E5.00 fee).</li>
+                                    <li>A E5.00 withdrawal fee is applied to all transactions.</li>
+                                    <li>Withdrawals are processed shortly in the sandbox environment.</li>
+                                    <li>Ensure the phone number is registered with MTN Mobile Money.</li>
+                                    <li>You’ll be redirected to the transaction status page after submission.</li>
+                                </ol>
+                            </small>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary">Request Withdrawal</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('withdraw-form');
+    const phoneInput = document.getElementById('phone_number');
+    const amountInput = document.getElementById('amount');
+    const maxAmount = {{ wallet.balance|floatformat:2 }};
+    const fee = 5.00;
+
+    // Prepend +268 to phone number
+    phoneInput.addEventListener('input', function() {
+        let value = this.value.replace(/[^\d+]/g, '');
+        if (!value.startsWith('+268')) {
+            value = '+268' + value.replace(/^\+?268/, '');
+            this.value = value;
+        }
+        if (value.length > 12) {
+            this.value = value.slice(0, 12);
+        }
+    });
+
+    // Validate amount considering fee
+    amountInput.addEventListener('input', function(e) {
+        const value = parseFloat(e.target.value) || 0;
+        if (value + fee > maxAmount) {
+            e.target.setCustomValidity(`Amount plus E5.00 fee exceeds available balance (E${maxAmount}).`);
+        } else if (value < 0.01) {
+            e.target.setCustomValidity('Minimum withdrawal amount is E0.01.');
+        } else {
+            e.target.setCustomValidity('');
+        }
+    });
+
+    // Bootstrap form validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

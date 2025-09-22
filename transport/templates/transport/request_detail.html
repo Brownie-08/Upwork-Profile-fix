@@ -1,0 +1,429 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 bg-gray-100 min-h-screen">
+    <!-- Debugging Output -->
+    {% if not user.is_authenticated %}
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+            <p>Please log in to place a bid.</p>
+        </div>
+    {% elif user == request.customer %}
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+            <p>You cannot bid on your own request.</p>
+        </div>
+    {% elif request.status|lower != 'open' %}
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+            <p>This request is not open for bidding (Status: {{ request.get_status_display }}).</p>
+        </div>
+    {% elif not user.profile.is_verified or user.profile.account_type != 'TAXI' %}
+        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+            <p>You must be a verified taxi driver to bid.</p>
+        </div>
+    {% endif %}
+
+    <!-- Main Card -->
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <h1 class="text-3xl font-semibold text-gray-900">Taxi Request Details</h1>
+            <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                {% if user != request.customer and request.status|lower == 'open' and user.profile.is_verified and user.profile.account_type == 'TAXI' %}
+                    <button id="place-bid-button" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
+                        Place Bid
+                    </button>
+                {% endif %}
+                <a href="{% url 'taxi:taxi_dashboard' %}" 
+                   class="bg-gray-500 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg text-center transition-colors duration-200">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Request Details -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Left: Details -->
+            <div class="space-y-6 bg-gray-50 p-6 rounded-lg">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-700">Route</h3>
+                    <p class="text-gray-600">From: <span class="font-medium">{{ request.pickup_location }}</span></p>
+                    <p class="text-gray-600">To: <span class="font-medium">{{ request.dropoff_location }}</span></p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-600">Distance</p>
+                        <p class="font-medium text-gray-900">{{ request.distance_km }} km</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Pickup Time</p>
+                        <p class="font-medium text-gray-900">{{ request.required_pickup_time|date:"F j, Y, g:i a" }}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-gray-600">Budget</p>
+                        <p class="font-medium text-gray-900">E{{ request.budget }}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Estimated Price</p>
+                        <p class="font-medium text-gray-900">E{{ request.estimated_price }}</p>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-gray-600">Status</p>
+                    <p class="font-medium text-teal-600">{{ request.get_status_display }}</p>
+                </div>
+                {% if request.special_instructions %}
+                    <div>
+                        <p class="text-gray-600">Special Instructions</p>
+                        <p class="font-medium text-gray-900">{{ request.special_instructions }}</p>
+                    </div>
+                {% endif %}
+                {% if request.rating %}
+                    <div>
+                        <p class="text-gray-600">Rating</p>
+                        <p class="font-medium text-gray-900">{{ request.rating }}/5</p>
+                    </div>
+                {% endif %}
+                {% if request.review %}
+                    <div>
+                        <p class="text-gray-600">Review</p>
+                        <p class="font-medium text-gray-900">{{ request.review }}</p>
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Right: Map -->
+            <div class="w-full h-[400px] lg:h-full rounded-lg overflow-hidden">
+                <div id="map" class="w-full h-full"></div>
+            </div>
+        </div>
+
+        <!-- Bids Section -->
+        <div>
+            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Bids ({{ bids.count }})</h2>
+            <div id="bids-container" class="space-y-4">
+                {% for bid in bids %}
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="font-semibold text-gray-900">E{{ bid.amount }}</p>
+                        <p class="text-gray-600">By: {{ bid.driver.profile.get_full_name|default:bid.driver.username }}</p>
+                        <p class="text-gray-600">Arrival: {{ bid.estimated_arrival_time|time:"H:i" }}</p>
+                        {% if bid.extra_information %}
+                            <p class="text-gray-600">Info: {{ bid.extra_information }}</p>
+                        {% endif %}
+                        {% if bid.job_sample %}
+                            <p class="text-gray-600">
+                                Sample: <a href="{{ bid.job_sample.url }}" class="text-blue-600 hover:underline" target="_blank">View File</a>
+                            </p>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <p class="text-gray-600">No bids yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bid Modal -->
+<div id="bidModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-900">Place a Bid</h3>
+            <button id="close-bid-modal" class="text-gray-500 hover:text-gray-700" aria-label="Close modal">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="mb-4 h-48 w-full rounded-lg overflow-hidden">
+            <div id="bid-modal-map" class="w-full h-full"></div>
+        </div>
+
+        <form id="bidForm" method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <div id="form-errors" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+
+            <div>
+                <label for="{{ bid_form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Bid Amount (SZL)</label>
+                {{ bid_form.amount }}
+                <p class="mt-1 text-sm text-gray-500">Customer's budget: E{{ request.budget }}</p>
+                {% if bid_form.amount.errors %}
+                    <p class="text-red-600 text-sm">{{ bid_form.amount.errors.as_text }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ bid_form.estimated_arrival_time.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Estimated Arrival Time</label>
+                {{ bid_form.estimated_arrival_time }}
+                {% if bid_form.estimated_arrival_time.errors %}
+                    <p class="text-red-600 text-sm">{{ bid_form.estimated_arrival_time.errors.as_text }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ bid_form.extra_information.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
+                {{ bid_form.extra_information }}
+                {% if bid_form.extra_information.errors %}
+                    <p class="text-red-600 text-sm">{{ bid_form.extra_information.errors.as_text }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label for="{{ bid_form.job_sample.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Job Sample (Optional, 1 file)</label>
+                {{ bid_form.job_sample }}
+                <p class="mt-1 text-sm text-gray-500">Upload a file (e.g., driver’s license, vehicle photo). Max 5MB.</p>
+                {% if bid_form.job_sample.errors %}
+                    <p class="text-red-600 text-sm">{{ bid_form.job_sample.errors.as_text }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-end gap-4 mt-6">
+                <button type="button" id="cancel-bid-button" 
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">
+                    Submit Bid
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|default:'' }}&libraries=places&loading=async" async></script>
+<script>
+console.log('Taxi request detail script loaded');
+
+// Modal Functions
+function openBidModal() {
+    console.log('openBidModal called');
+    const modal = document.getElementById('bidModal');
+    const errorDiv = document.getElementById('form-errors');
+    errorDiv.classList.add('hidden');
+    errorDiv.innerHTML = '';
+    document.getElementById('bidForm').reset();
+    modal.classList.remove('hidden');
+    document.getElementById('id_amount').focus();
+    initBidModalMap();
+}
+
+function closeBidModal() {
+    console.log('closeBidModal called');
+    const modal = document.getElementById('bidModal');
+    const errorDiv = document.getElementById('form-errors');
+    modal.classList.add('hidden');
+    errorDiv.classList.add('hidden');
+    errorDiv.innerHTML = '';
+    document.getElementById('bidForm').reset();
+}
+
+// Map Initialization (Main)
+function initMap() {
+    console.log('initMap called');
+    {% if request.pickup_latitude and request.pickup_longitude and request.dropoff_latitude and request.dropoff_longitude %}
+        const pickup = { lat: {{ request.pickup_latitude }}, lng: {{ request.pickup_longitude }} };
+        const dropoff = { lat: {{ request.dropoff_latitude }}, lng: {{ request.dropoff_longitude }} };
+
+        const map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 14,
+            center: pickup,
+            mapTypeControl: false,
+            streetViewControl: false
+        });
+
+        new google.maps.Marker({
+            position: pickup,
+            map: map,
+            title: "Pickup Location",
+            icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+        });
+
+        new google.maps.Marker({
+            position: dropoff,
+            map: map,
+            title: "Dropoff Location",
+            icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+        });
+
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: true
+        });
+
+        directionsService.route({
+            origin: pickup,
+            destination: dropoff,
+            travelMode: 'DRIVING'
+        }, function(result, status) {
+            if (status === 'OK') {
+                directionsRenderer.setDirections(result);
+            } else {
+                console.error('Directions request failed:', status);
+                document.getElementById('map').innerHTML = '<p class="text-red-500 p-4">Unable to load route.</p>';
+            }
+        });
+    {% else %}
+        document.getElementById('map').innerHTML = '<p class="text-red-500 p-4">Map unavailable: Missing coordinates.</p>';
+    {% endif %}
+}
+
+// Map Initialization (Bid Modal)
+function initBidModalMap() {
+    console.log('initBidModalMap called');
+    {% if request.pickup_latitude and request.pickup_longitude and request.dropoff_latitude and request.dropoff_longitude %}
+        const pickup = { lat: {{ request.pickup_latitude }}, lng: {{ request.pickup_longitude }} };
+        const dropoff = { lat: {{ request.dropoff_latitude }}, lng: {{ request.dropoff_longitude }} };
+
+        const map = new google.maps.Map(document.getElementById('bid-modal-map'), {
+            zoom: 12,
+            center: pickup,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false
+        });
+
+        new google.maps.Marker({
+            position: pickup,
+            map: map,
+            title: "Pickup Location",
+            icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+        });
+
+        new google.maps.Marker({
+            position: dropoff,
+            map: map,
+            title: "Dropoff Location",
+            icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+        });
+
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: true
+        });
+
+        directionsService.route({
+            origin: pickup,
+            destination: dropoff,
+            travelMode: 'DRIVING'
+        }, function(result, status) {
+            if (status === 'OK') {
+                directionsRenderer.setDirections(result);
+            } else {
+                console.error('Bid modal directions failed:', status);
+                document.getElementById('bid-modal-map').innerHTML = '<p class="text-red-500 p-2 text-sm">Unable to load route.</p>';
+            }
+        });
+    {% else %}
+        document.getElementById('bid-modal-map').innerHTML = '<p class="text-red-500 p-2 text-sm">Map unavailable: Missing coordinates.</p>';
+    {% endif %}
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded');
+
+    // Place Bid Button
+    const placeBidButton = document.getElementById('place-bid-button');
+    if (placeBidButton) {
+        console.log('Place bid button found');
+        placeBidButton.addEventListener('click', openBidModal);
+    } else {
+        console.warn('Place bid button not found');
+    }
+
+    // Close Modal Button
+    const closeButton = document.getElementById('close-bid-modal');
+    if (closeButton) {
+        closeButton.addEventListener('click', closeBidModal);
+    }
+
+    // Cancel Button
+    const cancelButton = document.getElementById('cancel-bid-button');
+    if (cancelButton) {
+        cancelButton.addEventListener('click', closeBidModal);
+    }
+
+    // Modal Outside Click
+    const modal = document.getElementById('bidModal');
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeBidModal();
+        }
+    });
+
+    // Escape Key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closeBidModal();
+        }
+    });
+
+    // Form Submission
+    const bidForm = document.getElementById('bidForm');
+    if (bidForm) {
+        bidForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Bid form submitted');
+            const formData = new FormData(this);
+            const errorDiv = document.getElementById('form-errors');
+
+            fetch('{% url 'taxi:taxi_request_detail' request.id %}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('Bid submitted successfully');
+                    const bidsContainer = document.getElementById('bids-container');
+                    bidsContainer.insertAdjacentHTML('afterbegin', data.bid_html);
+                    closeBidModal();
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'fixed top-4 right-4 bg-teal-500 text-white px-4 py-2 rounded shadow-lg';
+                    successDiv.textContent = data.message;
+                    document.body.appendChild(successDiv);
+                    setTimeout(() => successDiv.remove(), 3000);
+                } else {
+                    console.log('Form errors:', data.errors);
+                    errorDiv.classList.remove('hidden');
+                    errorDiv.innerHTML = '<ul class="list-disc list-inside">';
+                    for (const field in data.errors) {
+                        data.errors[field].forEach(error => {
+                            errorDiv.innerHTML += `<li>${field.charAt(0).toUpperCase() + field.slice(1)}: ${error}</li>`;
+                        });
+                    }
+                    errorDiv.innerHTML += '</ul>';
+                }
+            })
+            .catch(error => {
+                console.error('Submission error:', error);
+                errorDiv.classList.remove('hidden');
+                errorDiv.innerHTML = '<p class="text-red-700">An error occurred. Please try again later.</p>';
+            });
+        });
+    }
+
+    // Initialize Main Map
+    if (typeof google !== 'undefined' && google.maps) {
+        console.log('Google Maps API loaded');
+        initMap();
+    } else {
+        console.log('Google Maps API not loaded');
+        document.getElementById('map').innerHTML = '<p class="text-red-500 p-4">Map unavailable: Google Maps API failed to load.</p>';
+    }
+});
+</script>
+{% endblock %}

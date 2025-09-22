@@ -1,0 +1,1281 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vehicle Dashboard - LusitoHub{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .status-chip {
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    .status-pending { background-color: #fef3c7; color: #92400e; }
+    .status-approved { background-color: #d1fae5; color: #065f46; }
+    .status-rejected { background-color: #fee2e2; color: #991b1b; }
+    .status-missing { background-color: #f3f4f6; color: #6b7280; }
+    
+    .vehicle-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+    }
+    .vehicle-card:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-color: #3b82f6;
+    }
+    
+    .document-item {
+        border-left: 4px solid transparent;
+        padding-left: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .document-item.pending { border-left-color: #f59e0b; }
+    .document-item.approved { border-left-color: #10b981; }
+    .document-item.rejected { border-left-color: #ef4444; }
+    .document-item.missing { border-left-color: #9ca3af; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0">Vehicle Dashboard</h1>
+            <p class="text-muted">Manage your vehicles and document verification</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+                <i class="fas fa-plus me-2"></i>Add Vehicle
+            </button>
+        </div>
+    </div>
+
+    <!-- Referral Code Section -->
+    {% if referral_stats.referral_code %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-share-alt me-2"></i>Your Referral Code
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <span class="me-3">Share this code with friends:</span>
+                                <div class="input-group" style="max-width: 200px;">
+                                    <input type="text" class="form-control fw-bold text-center" 
+                                           value="{{ referral_stats.referral_code }}" 
+                                           id="referralCode" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            onclick="copyReferralCode()" title="Copy to clipboard">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted ms-3">
+                                    <i class="fas fa-users me-1"></i>
+                                    {{ referral_stats.total_referrals }} referred
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <small class="text-muted">
+                                Created {{ referral_stats.created_at|date:"M d, Y" }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Driver License Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-id-card me-2"></i>Driver's License
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <span class="me-3">Status:</span>
+                                <span class="status-chip status-{{ driver_license_status|lower }}">
+                                    {% if driver_license_status == 'APPROVED' %}
+                                        <i class="fas fa-check-circle me-1"></i>Approved
+                                    {% elif driver_license_status == 'REJECTED' %}
+                                        <i class="fas fa-times-circle me-1"></i>Rejected
+                                    {% elif driver_license_status == 'PENDING' %}
+                                        <i class="fas fa-clock me-1"></i>Pending Review
+                                    {% else %}
+                                        <i class="fas fa-upload me-1"></i>Upload Required
+                                    {% endif %}
+                                </span>
+                                {% if driver_license_status == 'REJECTED' and driver_license_doc.review.reason %}
+                                    <small class="text-danger ms-3">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        {{ driver_license_doc.review.reason }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if driver_license_status == 'MISSING' or driver_license_status == 'REJECTED' %}
+                                <button class="btn btn-outline-primary btn-sm" onclick="uploadDriverLicense()">
+                                    <i class="fas fa-upload me-1"></i>
+                                    {% if driver_license_status == 'MISSING' %}Upload{% else %}Re-upload{% endif %}
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transport Permit Section -->
+    <div class="row mb-4" id="permitSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-contract me-2"></i>Transport Permit
+                        <span id="transportBadge" class="badge bg-success ms-2" style="display: none;">
+                            <i class="fas fa-star me-1"></i>Authorized Provider
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <span class="me-3">Status:</span>
+                                <span class="status-chip" id="permitStatusChip">
+                                    <i class="fas fa-upload me-1"></i>Upload Required
+                                </span>
+                                <small class="text-danger ms-3" id="permitRejectionReason" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <span id="permitRejectionText"></span>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-outline-primary btn-sm" id="uploadPermitBtn" onclick="uploadPermit()">
+                                <i class="fas fa-upload me-1"></i>
+                                <span id="uploadPermitText">Upload</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicles Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-car me-2"></i>Your Vehicles ({{ vehicles.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if vehicles %}
+                        <div class="row">
+                            {% for vehicle in vehicles %}
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="vehicle-card p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h6 class="mb-1 fw-bold">{{ vehicle.plate_number }}</h6>
+                                                <small class="text-muted">
+                                                    {% if vehicle.make %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}{% else %}Vehicle{% endif %}
+                                                </small>
+                                            </div>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="viewDocuments({{ vehicle.id }})">
+                                                            <i class="fas fa-eye me-2"></i>View Documents
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="uploadVehicleDocument({{ vehicle.id }})">
+                                                            <i class="fas fa-upload me-2"></i>Upload Document
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="viewOperators({{ vehicle.id }})">
+                                                            <i class="fas fa-users me-2"></i>View Operators
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="assignOperator({{ vehicle.id }})">
+                                                            <i class="fas fa-user-plus me-2"></i>Assign Operator
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" onclick="deleteVehicle({{ vehicle.id }}, '{{ vehicle.plate_number }}')">
+                                                            <i class="fas fa-trash me-2"></i>Delete Vehicle
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Document Status Summary -->
+                                        <div class="mt-3">
+                                            <small class="text-muted d-block mb-2">Required Documents:</small>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                {% for doc_type in vehicle.get_required_documents %}
+                                                    {% with status=vehicle.get_document_status:doc_type %}
+                                                        <span class="status-chip status-{{ status|lower }} small">
+                                                            {% if doc_type == 'ROADWORTHY' %}Roadworthy
+                                                            {% elif doc_type == 'BLUEBOOK' %}Blue Book
+                                                            {% endif %}
+                                                        </span>
+                                                    {% endwith %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if vehicle.is_fully_documented %}
+                                            <div class="mt-2">
+                                                <small class="text-success">
+                                                    <i class="fas fa-check-circle me-1"></i>All documents approved
+                                                </small>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Operator Assignment Status -->
+                                        <div class="mt-3">
+                                            {% if vehicle.operator_assignment %}
+                                                <small class="text-muted d-block mb-1">Assigned Operator:</small>
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user me-2 text-primary"></i>
+                                                    <span class="small fw-medium">{{ vehicle.operator_assignment.operator.get_full_name|default:vehicle.operator_assignment.operator.username }}</span>
+                                                </div>
+                                            {% else %}
+                                                <small class="text-muted d-flex align-items-center">
+                                                    <i class="fas fa-user-slash me-2"></i>No operator assigned
+                                                </small>
+                                            {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Government Permit Section -->
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-certificate me-2"></i>Government Permit
+                {% if permit_status == 'APPROVED' %}
+                    <span class="badge bg-success ms-2">Authorized Provider</span>
+                {% elif permit_status == 'PENDING' %}
+                    <span class="badge bg-warning ms-2">Under Review</span>
+                {% elif permit_status == 'REJECTED' %}
+                    <span class="badge bg-danger ms-2">Rejected</span>
+                {% else %}
+                    <span class="badge bg-secondary ms-2">Not Uploaded</span>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if permit_status == 'APPROVED' %}
+                <div class="alert alert-success d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <div>
+                        <strong>Congratulations!</strong> Your Government Permit has been approved. You are now an Authorized Provider.
+                    </div>
+                </div>
+            {% elif permit_status == 'REJECTED' %}
+                <div class="alert alert-danger">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Permit Rejected</strong>
+                    </div>
+                    {% if rejection_reason %}
+                        <p class="mb-2"><strong>Reason:</strong> {{ rejection_reason }}</p>
+                    {% endif %}
+                    <p class="mb-0">Please review the requirements and upload a new permit document.</p>
+                </div>
+            {% elif permit_status == 'PENDING' %}
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="fas fa-clock me-2"></i>
+                    <div>
+                        Your Government Permit is currently under review. You will be notified once the review is complete.
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if not permit_status or permit_status == 'REJECTED' %}
+                <form method="post" action="{% url 'profiles:upload_permit_dashboard' %}" enctype="multipart/form-data" class="mt-3">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="id_document" class="form-label">Government Permit Document</label>
+                                <input type="file" class="form-control" id="id_document" name="document" 
+                                       accept=".pdf,.jpg,.jpeg,.png" required>
+                                <div class="form-text">Accepted formats: PDF, JPG, PNG. Max size: 5MB</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-upload me-2"></i>
+                                    {% if permit_status == 'REJECTED' %}Re-upload{% else %}Upload{% endif %} Permit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+
+            {% if current_permit %}
+                <div class="mt-3">
+                    <h6>Current Permit:</h6>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-file-pdf me-2 text-danger"></i>
+                        <span>{{ current_permit.document.name|slice:":50" }}</span>
+                        <small class="text-muted ms-2">Uploaded: {{ current_permit.uploaded_at|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-car text-muted" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3 text-muted">No vehicles added yet</h5>
+                            <p class="text-muted mb-4">Add your first vehicle to get started with document verification</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+                                <i class="fas fa-plus me-2"></i>Add Your First Vehicle
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Vehicle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addVehicleForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="plate_number" class="form-label">License Plate Number <span class="text-danger">*</span></label>
+                        {{ vehicle_form.plate_number }}
+                        <div class="form-text">Format: JSD 123 AM</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="make" class="form-label">Make</label>
+                            {{ vehicle_form.make }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="model" class="form-label">Model</label>
+                            {{ vehicle_form.model }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="year" class="form-label">Year</label>
+                            {{ vehicle_form.year }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="vehicle_type" class="form-label">Vehicle Type</label>
+                            {{ vehicle_form.vehicle_type }}
+                        </div>
+                    </div>
+                    
+                    <!-- Operator Assignment Choice -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ vehicle_form.will_be_operator }}
+                            <label class="form-check-label" for="willBeOperator">
+                                {{ vehicle_form.will_be_operator.label }}
+                            </label>
+                            {% if vehicle_form.will_be_operator.help_text %}
+                                <div class="form-text">{{ vehicle_form.will_be_operator.help_text }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add Vehicle
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Document Modal -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalTitle">Upload Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="uploadDocumentForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="vehicleIdField" name="vehicle_id">
+                    
+                    <div class="mb-3">
+                        <label for="doc_type" class="form-label">Document Type <span class="text-danger">*</span></label>
+                        <select name="doc_type" id="doc_type" class="form-select" required>
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Document File <span class="text-danger">*</span></label>
+                        <input type="file" name="file" id="file" class="form-control" 
+                               accept=".pdf,.jpg,.jpeg,.png" required>
+                        <div class="form-text">Accepted formats: PDF, JPG, PNG (max 5MB)</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> If you've already uploaded this document type, 
+                        the new file will replace the existing one and reset the review status to "Pending".
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-2"></i>Upload Document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Documents Modal -->
+<div class="modal fade" id="viewDocumentsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewDocumentsModalTitle">Document Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="documentsContainer">
+                    <!-- Documents will be loaded here by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="uploadVehicleDocumentFromView()">
+                    <i class="fas fa-upload me-2"></i>Upload Document
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Operator Modal -->
+<div class="modal fade" id="assignOperatorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignOperatorModalTitle">Assign Operator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="assignOperatorForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="assignVehicleId" name="vehicle_id">
+                    
+                    <div class="mb-3">
+                        <label for="operator_identifier" class="form-label">Operator Username or Email <span class="text-danger">*</span></label>
+                        <div class="position-relative">
+                            <input type="text" name="operator_identifier" id="operator_identifier" 
+                                   class="form-control" placeholder="Enter username or email" required autocomplete="off">
+                            <div id="operatorSearchResults" class="position-absolute w-100 bg-white border border-top-0 rounded-bottom shadow-sm d-none" style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+                        </div>
+                        <div class="form-text">Enter the username or email address of the operator</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> The operator must have a verified identity to be assigned to a vehicle.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>Assign Operator
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Operators Modal -->
+<div class="modal fade" id="viewOperatorsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewOperatorsModalTitle">Vehicle Operators</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="operatorsContainer">
+                    <!-- Operators will be loaded here by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="assignOperatorFromView()">
+                    <i class="fas fa-user-plus me-2"></i>Assign Operator
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Operator Modal -->
+<div class="modal fade" id="removeOperatorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Operator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="removeOperatorForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="removeAssignmentId" name="assignment_id">
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This will remove the operator's access to this vehicle.
+                    </div>
+                    
+                    <p id="removeOperatorText">Are you sure you want to remove this operator?</p>
+                    
+                    <div class="mb-3">
+                        <label for="removal_reason" class="form-label">Reason (Optional)</label>
+                        <textarea name="reason" id="removal_reason" class="form-control" rows="3" 
+                                placeholder="Enter reason for removing operator..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-user-minus me-2"></i>Remove Operator
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let currentVehicleId = null;
+
+// Add vehicle form submission
+document.getElementById('addVehicleForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding...';
+    
+    fetch('{% url "profiles:add_vehicle_dashboard" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('addVehicleModal')).hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showFormErrors(data.errors);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while adding the vehicle.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// Upload document form submission
+document.getElementById('uploadDocumentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+    
+    fetch('{% url "profiles:upload_document_dashboard" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('uploadDocumentModal')).hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showFormErrors(data.errors);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while uploading the document.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// Upload permit
+function uploadPermit() {
+    const formData = new FormData();
+    
+    // Create a file input dynamically
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.pdf,.jpg,.jpeg,.png';
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            formData.append('file', file);
+            formData.append('doc_type', 'PERMIT');
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            const uploadBtn = document.getElementById('uploadPermitBtn');
+            const originalText = uploadBtn.innerHTML;
+            
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+            
+            fetch('{% url "profiles:upload_permit_dashboard" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message);
+                    updatePermitStatus(); // Refresh permit status
+                } else {
+                    if (data.errors && data.errors.file) {
+                        showAlert('danger', 'File error: ' + (Array.isArray(data.errors.file) ? data.errors.file[0] : data.errors.file));
+                    } else {
+                        showAlert('danger', 'Failed to upload permit. Please try again.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'An error occurred while uploading the permit.');
+            })
+            .finally(() => {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = originalText;
+            });
+        }
+    });
+    fileInput.click();
+}
+
+// Update permit status
+function updatePermitStatus() {
+    fetch('{% url "profiles:get_permit_status" %}')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const permitStatus = data.permit_status;
+            const statusChip = document.getElementById('permitStatusChip');
+            const rejectionReason = document.getElementById('permitRejectionReason');
+            const rejectionText = document.getElementById('permitRejectionText');
+            const uploadBtn = document.getElementById('uploadPermitBtn');
+            const uploadText = document.getElementById('uploadPermitText');
+            const transportBadge = document.getElementById('transportBadge');
+            
+            // Update status chip
+            statusChip.className = `status-chip status-${permitStatus.status.toLowerCase()}`;
+            
+            if (permitStatus.status === 'APPROVED') {
+                statusChip.innerHTML = '<i class="fas fa-check-circle me-1"></i>Approved';
+                uploadBtn.style.display = 'none';
+            } else if (permitStatus.status === 'REJECTED') {
+                statusChip.innerHTML = '<i class="fas fa-times-circle me-1"></i>Rejected';
+                uploadText.textContent = 'Re-upload';
+                if (permitStatus.rejection_reason) {
+                    rejectionText.textContent = permitStatus.rejection_reason;
+                    rejectionReason.style.display = 'inline';
+                }
+            } else if (permitStatus.status === 'PENDING') {
+                statusChip.innerHTML = '<i class="fas fa-clock me-1"></i>Pending Review';
+                uploadBtn.style.display = 'none';
+            } else {
+                statusChip.innerHTML = '<i class="fas fa-upload me-1"></i>Upload Required';
+                uploadText.textContent = 'Upload';
+            }
+            
+            // Show/hide transport badge
+            if (permitStatus.badge_status.authorized) {
+                transportBadge.style.display = 'inline-block';
+            } else {
+                transportBadge.style.display = 'none';
+            }
+            
+            // Show permit section if user has vehicles or has uploaded a permit
+            if (permitStatus.has_permit || document.querySelector('.vehicle-card')) {
+                document.getElementById('permitSection').style.display = 'block';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// Upload driver license
+function uploadDriverLicense() {
+    currentVehicleId = null;
+    document.getElementById('vehicleIdField').value = '';
+    document.getElementById('uploadModalTitle').textContent = 'Upload Driver\'s License';
+    
+    const docTypeSelect = document.getElementById('doc_type');
+    docTypeSelect.innerHTML = '<option value="DRIVER_LICENSE">Driver\'s License</option>';
+    
+    // Reset form
+    const form = document.getElementById('uploadDocumentForm');
+    form.reset();
+    document.getElementById('vehicleIdField').value = ''; // Reset after form.reset()
+    
+    // Clear any previous errors
+    clearFormErrors();
+    
+    new bootstrap.Modal(document.getElementById('uploadDocumentModal')).show();
+}
+
+// Upload vehicle document
+function uploadVehicleDocument(vehicleId) {
+    currentVehicleId = vehicleId;
+    document.getElementById('vehicleIdField').value = vehicleId;
+    document.getElementById('uploadModalTitle').textContent = 'Upload Vehicle Document';
+    
+    const docTypeSelect = document.getElementById('doc_type');
+    docTypeSelect.innerHTML = `
+        <option value="">Select document type...</option>
+        <option value="ROADWORTHY">Roadworthiness Certificate</option>
+        <option value="BLUEBOOK">Registration Certificate (Blue Book)</option>
+    `;
+    
+    // Reset form
+    const form = document.getElementById('uploadDocumentForm');
+    form.reset();
+    document.getElementById('vehicleIdField').value = vehicleId; // Reset after form.reset()
+    
+    // Clear any previous errors
+    clearFormErrors();
+    
+    new bootstrap.Modal(document.getElementById('uploadDocumentModal')).show();
+}
+
+// Upload from view documents modal
+function uploadVehicleDocumentFromView() {
+    bootstrap.Modal.getInstance(document.getElementById('viewDocumentsModal')).hide();
+    setTimeout(() => uploadVehicleDocument(currentVehicleId), 300);
+}
+
+// View documents
+function viewDocuments(vehicleId) {
+    currentVehicleId = vehicleId;
+    
+    fetch(`{% url "profiles:get_vehicle_documents" 0 %}`.replace('0', vehicleId))
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('viewDocumentsModalTitle').textContent = 
+                `Documents for ${data.vehicle.display_name}`;
+            
+            const container = document.getElementById('documentsContainer');
+            container.innerHTML = data.documents.map(doc => `
+                <div class="document-item ${doc.status.toLowerCase()} p-3 mb-3 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${doc.doc_type_display}</h6>
+                            <span class="status-chip status-${doc.status.toLowerCase()}">
+                                ${doc.status === 'APPROVED' ? '<i class="fas fa-check-circle me-1"></i>Approved' :
+                                  doc.status === 'REJECTED' ? '<i class="fas fa-times-circle me-1"></i>Rejected' :
+                                  doc.status === 'PENDING' ? '<i class="fas fa-clock me-1"></i>Pending Review' :
+                                  '<i class="fas fa-upload me-1"></i>Upload Required'}
+                            </span>
+                            ${doc.uploaded_at ? `<small class="text-muted d-block mt-1">Uploaded: ${doc.uploaded_at}</small>` : ''}
+                            ${doc.rejection_reason ? `<small class="text-danger d-block mt-1"><i class="fas fa-exclamation-triangle me-1"></i>${doc.rejection_reason}</small>` : ''}
+                        </div>
+                        <div>
+                            ${doc.file_url ? `<a href="${doc.file_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2"><i class="fas fa-eye"></i></a>` : ''}
+                            ${doc.status === 'MISSING' || doc.status === 'REJECTED' ? `<button class="btn btn-sm btn-primary" onclick="uploadVehicleDocument(${vehicleId})"><i class="fas fa-upload"></i></button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            new bootstrap.Modal(document.getElementById('viewDocumentsModal')).show();
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while loading documents.');
+    });
+}
+
+// Delete vehicle
+function deleteVehicle(vehicleId, plateNumber) {
+    if (!confirm(`Are you sure you want to delete vehicle ${plateNumber}? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`{% url "profiles:delete_vehicle_dashboard" 0 %}`.replace('0', vehicleId), {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while deleting the vehicle.');
+    });
+}
+
+// Utility functions
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.parentNode.removeChild(alertDiv);
+        }
+    }, 5000);
+}
+
+function clearFormErrors() {
+    // Clear previous errors
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+}
+
+function showFormErrors(errors) {
+    // Clear previous errors first
+    clearFormErrors();
+    
+    // Show new errors
+    for (const [field, fieldErrors] of Object.entries(errors)) {
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) {
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = Array.isArray(fieldErrors) ? fieldErrors[0] : fieldErrors;
+            input.parentNode.appendChild(feedback);
+        }
+    }
+}
+
+// Assign operator functions
+function assignOperator(vehicleId) {
+    currentVehicleId = vehicleId;
+    document.getElementById('assignVehicleId').value = vehicleId;
+    document.getElementById('operator_identifier').value = '';
+    
+    // Clear any previous errors
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    
+    new bootstrap.Modal(document.getElementById('assignOperatorModal')).show();
+}
+
+function assignOperatorFromView() {
+    bootstrap.Modal.getInstance(document.getElementById('viewOperatorsModal')).hide();
+    setTimeout(() => assignOperator(currentVehicleId), 300);
+}
+
+// Operator search functionality
+let searchTimeout = null;
+const operatorInput = document.getElementById('operator_identifier');
+const searchResults = document.getElementById('operatorSearchResults');
+
+function debounceSearch(func, delay) {
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
+function showSearchResults(operators) {
+    if (operators.length === 0) {
+        searchResults.classList.add('d-none');
+        return;
+    }
+    
+    searchResults.innerHTML = operators.map(op => `
+        <div class="p-2 border-bottom search-result-item" style="cursor: pointer;" 
+             data-username="${op.username}" data-email="${op.email}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${op.username}</strong>
+                    <small class="text-muted d-block">${op.email}</small>
+                    ${op.full_name ? `<small class="text-muted">${op.full_name}</small>` : ''}
+                </div>
+                <div>
+                    ${op.has_active_assignment ? 
+                        '<span class="badge bg-warning">Already Assigned</span>' : 
+                        '<span class="badge bg-success">Available</span>'
+                    }
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add click handlers to search results
+    searchResults.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const username = this.dataset.username;
+            operatorInput.value = username;
+            searchResults.classList.add('d-none');
+            operatorInput.focus();
+        });
+        
+        // Add hover effects
+        item.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        item.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+    
+    searchResults.classList.remove('d-none');
+}
+
+function searchOperators(query) {
+    if (!query || query.length < 2) {
+        searchResults.classList.add('d-none');
+        return;
+    }
+    
+    fetch(`{% url "profiles:search_operators" %}?q=${encodeURIComponent(query)}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.operators) {
+            showSearchResults(data.operators);
+        }
+    })
+    .catch(error => {
+        console.error('Search error:', error);
+        searchResults.classList.add('d-none');
+    });
+}
+
+const debouncedSearch = debounceSearch(searchOperators, 300);
+
+operatorInput.addEventListener('input', function() {
+    debouncedSearch(this.value.trim());
+});
+
+// Hide search results when clicking outside
+document.addEventListener('click', function(event) {
+    if (!operatorInput.contains(event.target) && !searchResults.contains(event.target)) {
+        searchResults.classList.add('d-none');
+    }
+});
+
+// Show search results when focusing input (if there's text)
+operatorInput.addEventListener('focus', function() {
+    if (this.value.trim().length >= 2) {
+        debouncedSearch(this.value.trim());
+    }
+});
+
+// Hide search results on escape key
+operatorInput.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        searchResults.classList.add('d-none');
+    }
+});
+
+// Assign operator form submission
+document.getElementById('assignOperatorForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Assigning...';
+    
+    fetch('{% url "profiles:assign_operator_dashboard" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('assignOperatorModal')).hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            if (data.errors) {
+                showFormErrors(data.errors);
+            } else {
+                showAlert('danger', data.message);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while assigning the operator.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// View operators
+function viewOperators(vehicleId) {
+    currentVehicleId = vehicleId;
+    
+    fetch(`{% url "profiles:get_vehicle_operators" 0 %}`.replace('0', vehicleId))
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('viewOperatorsModalTitle').textContent = 
+                `Operators for ${data.vehicle.display_name}`;
+            
+            const container = document.getElementById('operatorsContainer');
+            
+            if (data.operators.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-users text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3 text-muted">No operators assigned</h5>
+                        <p class="text-muted mb-4">This vehicle doesn't have any operators assigned yet.</p>
+                        <button class="btn btn-primary" onclick="assignOperatorFromView()">
+                            <i class="fas fa-user-plus me-2"></i>Assign First Operator
+                        </button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = data.operators.map(assignment => `
+                    <div class="d-flex justify-content-between align-items-center p-3 mb-3 bg-light rounded">
+                        <div>
+                            <h6 class="mb-1">${assignment.operator_name}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-envelope me-1"></i>${assignment.operator_email}
+                            </small>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-calendar me-1"></i>Assigned: ${assignment.assigned_at}
+                            </small>
+                            ${assignment.assigned_by ? `
+                                <small class="text-muted d-block">
+                                    <i class="fas fa-user me-1"></i>Assigned by: ${assignment.assigned_by}
+                                </small>
+                            ` : ''}
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="removeOperator(${assignment.id}, '${assignment.operator_name}')">
+                                <i class="fas fa-user-minus me-1"></i>Remove
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            new bootstrap.Modal(document.getElementById('viewOperatorsModal')).show();
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while loading operators.');
+    });
+}
+
+// Remove operator
+function removeOperator(assignmentId, operatorName) {
+    document.getElementById('removeAssignmentId').value = assignmentId;
+    document.getElementById('removeOperatorText').textContent = 
+        `Are you sure you want to remove ${operatorName} from this vehicle?`;
+    document.getElementById('removal_reason').value = '';
+    
+    // Hide view operators modal and show remove modal
+    bootstrap.Modal.getInstance(document.getElementById('viewOperatorsModal')).hide();
+    setTimeout(() => {
+        new bootstrap.Modal(document.getElementById('removeOperatorModal')).show();
+    }, 300);
+}
+
+// Remove operator form submission
+document.getElementById('removeOperatorForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Removing...';
+    
+    fetch('{% url "profiles:remove_operator_dashboard" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            bootstrap.Modal.getInstance(document.getElementById('removeOperatorModal')).hide();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showAlert('danger', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while removing the operator.');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+// Copy referral code to clipboard
+function copyReferralCode() {
+    const referralCodeInput = document.getElementById('referralCode');
+    referralCodeInput.select();
+    referralCodeInput.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        
+        // Visual feedback
+        const button = event.target.closest('button');
+        const originalIcon = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.classList.replace('btn-outline-secondary', 'btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.classList.replace('btn-success', 'btn-outline-secondary');
+        }, 2000);
+        
+        showAlert('success', 'Referral code copied to clipboard!');
+    } catch (err) {
+        // Fallback for browsers that don't support execCommand
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(referralCodeInput.value).then(() => {
+                showAlert('success', 'Referral code copied to clipboard!');
+            }).catch(() => {
+                showAlert('warning', 'Unable to copy to clipboard. Please select and copy manually.');
+            });
+        } else {
+            showAlert('warning', 'Please select and copy the referral code manually.');
+        }
+    }
+}
+
+// Initialize permit status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    updatePermitStatus();
+});
+</script>
+{% endblock %}

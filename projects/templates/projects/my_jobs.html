@@ -1,0 +1,168 @@
+{% extends "core/base.html" %}
+{% block title %}My Jobs{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Project Sections Tabs -->
+    <div class="tabs mb-4">
+        <button class="active" data-target="in-progress">In Progress</button>
+        <button data-target="completed">Completed</button>
+        <button data-target="issued">Issued</button>
+    </div>
+
+    <!-- In Progress Section -->
+    <div id="in-progress" class="project-section active">
+        <div class="section-header d-flex justify-content-between align-items-center mb-4">
+            <h2 class="m-0">In Progress</h2>
+            <span class="badge bg-primary">{{ active_jobs|length }}</span>
+        </div>
+        
+        {% if active_jobs %}
+            <div class="project-list">
+                {% for project in active_jobs %}
+                    <div class="project-item hover:bg-gray-50 border-bottom py-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="project-info">
+                                <h5 class="mb-2">{{ project.title }}</h5>
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="far fa-calendar me-2"></i>
+                                    <span>Started: {{ project.created_at|date:"M d, Y" }}</span>
+                                </div>
+                            </div>
+                            <a href="{% if project.client and project.freelancer %}
+                                        {% url 'project-completion' project.pk %}
+                                    {% else %}
+                                        {% url 'project-detail' project.pk %}
+                                    {% endif %}" 
+                                class="btn btn-primary">
+                                Show Details
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                <p>No projects in progress</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Completed Section -->
+    <div id="completed" class="project-section d-none">
+        <div class="section-header d-flex justify-content-between align-items-center mb-4">
+            <h2 class="m-0">Completed</h2>
+            <span class="badge bg-success">{{ completed_jobs|length }}</span>
+        </div>
+        
+        {% if completed_jobs %}
+            <div class="project-list">
+                {% for project in completed_jobs %}
+                    <div class="project-item hover:bg-gray-50 border-bottom py-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="project-info">
+                                <h5 class="mb-2">{{ project.title }}</h5>
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="far fa-check-circle me-2"></i>
+                                    <span>Completed: {{ project.updated_at|date:"M d, Y" }}</span>
+                                </div>
+                            </div>
+                            <a href="{% if project.client and project.freelancer %}
+                                        {% url 'project-completion' project.pk %}
+                                    {% else %}
+                                        {% url 'project-detail' project.pk %}
+                                    {% endif %}" 
+                                class="btn btn-primary">
+                                Show Details
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-check-double fa-3x mb-3"></i>
+                <p>No completed projects</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Issued Section -->
+    <div id="issued" class="project-section d-none">
+        <div class="section-header d-flex justify-content-between align-items-center mb-4">
+            <h2 class="m-0">Issued</h2>
+            <span class="badge bg-warning">{{ issued_jobs|length }}</span>
+        </div>
+        
+        {% if issued_jobs %}
+            <div class="project-list">
+                {% for project in issued_jobs %}
+                    <div class="project-item hover:bg-gray-50 border-bottom py-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="project-info">
+                                <h5 class="mb-2">{{ project.title }}</h5>
+                                <div class="d-flex flex-column flex-sm-row gap-2 text-muted">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-circle me-2" style="font-size: 0.5rem;"></i>
+                                        <span class="text-danger font-weight-bold">{{ project.get_status_display }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="far fa-calendar me-2"></i>
+                                        <span>Created: {{ project.created_at|date:"M d, Y" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="{% if project.client and project.freelancer %}
+                                        {% url 'project-completion' project.pk %}
+                                    {% else %}
+                                        {% url 'project-detail' project.pk %}
+                                    {% endif %}" 
+                                class="btn btn-primary">
+                                Show Details
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-file-alt fa-3x mb-3"></i>
+                <p>No issued projects</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mt-4">
+    <a href="{% url 'home' %}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabs = document.querySelectorAll('.tabs button');
+    const sections = document.querySelectorAll('.project-section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tab
+            tab.classList.add('active');
+            
+            // Hide all sections
+            sections.forEach(section => {
+                section.classList.add('d-none');
+            });
+            
+            // Show selected section
+            const targetSection = document.getElementById(tab.dataset.target);
+            targetSection.classList.remove('d-none');
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

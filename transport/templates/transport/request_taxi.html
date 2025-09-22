@@ -1,0 +1,508 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Request a Taxi{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <main class="min-h-screen" style="background-color: var(--background-color);">
+            <div class="container max-w-4xl mx-auto py-8 px-4">
+                <div class="card">
+                    <div class="profile-header">
+                        <div class="flex items-center space-x-3">
+                            <h1 class="text-2xl font-bold" style="color: var(--text-color);">Request a Taxi</h1>
+                        </div>
+                    </div>
+                    {% if messages %}
+                        <div class="messages mb-4">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <form method="post" class="space-y-8">
+                            {% csrf_token %}
+                            {% if form.errors %}
+                                <div class="notification-item" style="background-color: rgba(255, 0, 0, 0.1); border-left-color: #dc3545;">
+                                    <h3 class="text-sm font-medium" style="color: #dc3545;">Please correct the errors:</h3>
+                                    <ul class="mt-2 text-sm notification-content">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                                <li>{{ field.label }}: {{ error }}</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                            <div class="stats-container">
+                                <h2 class="detail-header">Journey Details</h2>
+                                <div class="mb-3">
+                                    <label class="form-label">Route Map</label>
+                                    <div id="map" style="height: 400px;" class="mt-2 rounded-xl"></div>
+                                    <div class="notification-item mt-2">
+                                        <div class="stat-item">
+                                            <i class="fas fa-map-marker-alt" style="color: var(--primary-color);"></i>
+                                            <span id="pickup-address">Select pickup location...</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <i class="fas fa-map-marker-alt" style="color: #dc3545;"></i>
+                                            <span id="dropoff-address">Select dropoff location...</span>
+                                        </div>
+                                        <div id="route-details" class="notification-content mt-2">
+                                            <strong>Estimated Distance:</strong> <span id="distance"></span><br>
+                                            <strong>Estimated Duration:</strong> <span id="duration"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="fee-grid">
+                                    <div class="pricing-item">
+                                        <label class="block text-sm font-medium" style="color: var(--text-color);">Pickup Location</label>
+                                        {{ form.pickup_location|as_crispy_field }}
+                                        <input type="hidden" id="pickup_latitude" name="pickup_latitude">
+                                        <input type="hidden" id="pickup_longitude" name="pickup_longitude">
+                                    </div>
+                                    <div class="pricing-item">
+                                        <label class="block text-sm font-medium" style="color: var(--text-color);">Dropoff Location</label>
+                                        {{ form.dropoff_location|as_crispy_field }}
+                                        <input type="hidden" id="dropoff_latitude" name="dropoff_latitude">
+                                        <input type="hidden" id="dropoff_longitude" name="dropoff_longitude">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stats-container">
+                                <h2 class="detail-header">Budget and Instructions</h2>
+                                <div class="fee-grid">
+                                    <div class="pricing-item">
+                                        {{ form.budget|as_crispy_field }}
+                                        <small class="text-gray-500">Estimated Ride Price:</small>
+                                    </div>
+                                    <div class="pricing-item">
+                                        {{ form.required_pickup_time|as_crispy_field }}
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    {{ form.special_instructions|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="pt-6">
+                                <button type="submit" class="btn btn-primary">
+                                    Request Taxi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Google Maps API Script -->
+<script>
+    (function(g) {
+        let h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__",
+            m = document, b = window;
+        b[c] = b[c] || {};
+        const d = b[c].maps = b[c].maps || {}, r = new Set, e = new URLSearchParams;
+        const u = () => h || (h = new Promise(async (f, n) => {
+            try {
+                a = m.createElement("script");
+                e.set("libraries", [...r] + "");
+                for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]);
+                e.set("callback", c + ".maps." + q);
+                a.src = `https://maps.${c}apis.com/maps/api/js?` + e;
+                d[q] = f;
+                a.onerror = () => n(new Error(p + " could not load."));
+                a.nonce = m.querySelector("script[nonce]")?.nonce || "";
+                m.head.append(a);
+            } catch (err) {
+                n(err);
+            }
+        }));
+        d[l] ? console.warn(p + " only loads once. Ignoring:", g) :
+            d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n));
+    })({
+        key: "{{ google_maps_api_key }}", // Use Django template variable
+        v: "weekly",
+        libraries: "maps,marker,places,routes"
+    });
+</script>
+
+<script>
+    // Global variables
+    let map = null;
+    let directionsService = null;
+    let directionsRenderer = null;
+    let pickupMarker = null;
+    let dropoffMarker = null;
+
+    async function initMap() {
+        try {
+            // Import required libraries
+            const { Map } = await google.maps.importLibrary("maps");
+            const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
+            const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+            const { DirectionsService, DirectionsRenderer } = await google.maps.importLibrary("routes");
+
+            // Initialize the map
+            map = new Map(document.getElementById("map"), {
+                center: { lat: -26.5225, lng: 31.4659 }, // Default center (Mbabane, Eswatini)
+                zoom: 12,
+                mapId: "6c2ff4a3dbbab977c8e1e7e4", // Your provided Map ID
+            });
+
+            // Initialize Directions service and renderer
+            directionsService = new DirectionsService();
+            directionsRenderer = new DirectionsRenderer({ suppressMarkers: true });
+            directionsRenderer.setMap(map);
+
+            // Add reset button to the map
+            addResetButtonToMap();
+
+            // Add click listener for map
+            map.addListener("click", (event) => {
+                if (!pickupMarker) {
+                    addMarker("pickup", event.latLng);
+                } else if (!dropoffMarker) {
+                    addMarker("dropoff", event.latLng);
+                }
+            });
+
+            // Setup form field to map integration
+            setupFormFieldsToMap();
+        } catch (error) {
+            console.error("Failed to initialize map:", error);
+            throw error; // Re-throw to ensure error is visible in console
+        }
+    }
+
+    // Function to add a reset button to the map
+    function addResetButtonToMap() {
+        const resetButtonDiv = document.createElement("div");
+        resetButtonDiv.className = "reset-button-container";
+
+        const resetButton = document.createElement("button");
+        resetButton.id = "map-reset-button";
+        resetButton.innerText = "Reset Map";
+        resetButton.className = "btn btn-sm btn-danger";
+        resetButton.style.margin = "10px";
+        resetButton.style.padding = "5px 10px";
+        resetButton.style.zIndex = "1000";
+
+        resetButton.addEventListener("click", resetMap);
+        resetButtonDiv.appendChild(resetButton);
+        map.controls[google.maps.ControlPosition.TOP_RIGHT].push(resetButtonDiv);
+    }
+
+    function addMarker(type, position) {
+        // Create a PinElement for styling
+        const pin = new google.maps.marker.PinElement({
+            background: type === "pickup" ? "#00FF00" : "#FF0000", // Green for pickup, red for dropoff
+            borderColor: "#000000",
+            glyphColor: "#FFFFFF",
+        });
+
+        // Create the marker
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            map: map,
+            position: position,
+            title: type === "pickup" ? "Pickup Location" : "Dropoff Location",
+            content: pin.element,
+            draggable: true,
+        });
+
+        // Add dragend listener
+        marker.addListener("dragend", () => updateLocationInputs(type, marker.position));
+
+        if (type === "pickup") {
+            pickupMarker = marker;
+        } else {
+            dropoffMarker = marker;
+        }
+
+        updateLocationInputs(type, position);
+        return marker;
+    }
+
+    function updateLocationInputs(type, position) {
+        const latInput = document.getElementById(`${type}_latitude`);
+        const lngInput = document.getElementById(`${type}_longitude`);
+        const addressElement = document.getElementById(`${type}-address`);
+        const lat = position.lat();
+        const lng = position.lng();
+
+        if (latInput && lngInput) {
+            latInput.value = lat;
+            lngInput.value = lng;
+        } else {
+            console.warn(`Input fields for ${type} latitude/longitude not found`);
+        }
+
+        if (addressElement) {
+            addressElement.textContent = "Fetching address...";
+        }
+
+        // Validate coordinates
+        if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            console.error(`Invalid coordinates for ${type}: lat=${lat}, lng=${lng}`);
+            if (addressElement) {
+                addressElement.textContent = "Invalid coordinates";
+            }
+            return;
+        }
+
+        // Use Geocoding API to get address
+        fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key={{ google_maps_api_key }}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.debug(`Geocoding response for ${type}:`, data); // Debug response
+                if (data.status === "OK" && data.results && data.results.length > 0) {
+                    const address = data.results[0].formatted_address;
+                    if (addressElement) {
+                        addressElement.textContent = address;
+                    }
+                    const fieldId = type === "pickup" ? "id_pickup_location" : "id_dropoff_location";
+                    const formField = document.getElementById(fieldId);
+                    if (formField) {
+                        formField.value = address;
+                    }
+                } else {
+                    const errorMsg = data.status === "ZERO_RESULTS"
+                        ? "No address found for these coordinates"
+                        : `Geocoding failed: ${data.status}`;
+                    console.warn(errorMsg);
+                    if (addressElement) {
+                        addressElement.textContent = errorMsg;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error(`Error fetching address for ${type}:`, error);
+                if (addressElement) {
+                    addressElement.textContent = "Error fetching address";
+                }
+            });
+
+        updateRouteIfPossible();
+    }
+
+    function updateRouteIfPossible() {
+        if (pickupMarker && dropoffMarker && pickupMarker.position && dropoffMarker.position) {
+            directionsService.route({
+                origin: pickupMarker.position,
+                destination: dropoffMarker.position,
+                travelMode: google.maps.TravelMode.DRIVING,
+            }, (response, status) => {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    directionsRenderer.setDirections(response);
+                    const distance = response.routes[0].legs[0].distance.value / 1000;
+                    const duration = response.routes[0].legs[0].duration.value / 60;
+                    const estimatedPrice = calculateEstimatedPrice(distance);
+
+                    // Update displayed distance and duration
+                    const distanceElement = document.getElementById("distance");
+                    const durationElement = document.getElementById("duration");
+                    if (distanceElement) distanceElement.textContent = `${distance.toFixed(1)} km`;
+                    if (durationElement) durationElement.textContent = `${Math.round(duration)} minutes`;
+
+                    // Create/update hidden distance field
+                    let distanceField = document.getElementById("distance_km");
+                    if (!distanceField) {
+                        distanceField = document.createElement("input");
+                        distanceField.type = "hidden";
+                        distanceField.id = "distance_km";
+                        distanceField.name = "distance_km";
+                        const form = document.querySelector("form");
+                        if (form) form.appendChild(distanceField);
+                    }
+                    distanceField.value = distance.toFixed(1);
+
+                    // Update budget field
+                    const budgetField = document.getElementById("id_budget");
+                    if (budgetField) {
+                        budgetField.min = estimatedPrice;
+                        budgetField.value = estimatedPrice.toFixed(2);
+                    }
+
+                    // Update price estimate
+                    const priceInfoElements = document.querySelectorAll("small.text-gray-500");
+                    if (priceInfoElements.length > 0) {
+                        priceInfoElements[0].textContent = `Estimated Ride Price: E${estimatedPrice.toFixed(2)}`;
+                    }
+                } else {
+                    console.warn("Directions request failed:", status);
+                }
+            });
+        }
+    }
+
+    function calculateEstimatedPrice(distanceKm) {
+        return distanceKm <= 3 ? 60 : 60 + (distanceKm - 3) * 10;
+    }
+
+    function resetMap() {
+        if (pickupMarker) pickupMarker.map = null;
+        if (dropoffMarker) dropoffMarker.map = null;
+        pickupMarker = dropoffMarker = null;
+        directionsRenderer.setDirections({ routes: [] });
+
+        ["pickup", "dropoff"].forEach(type => {
+            const latInput = document.getElementById(`${type}_latitude`);
+            const lngInput = document.getElementById(`${type}_longitude`);
+            const addressElement = document.getElementById(`${type}-address`);
+            const formField = document.getElementById(type === "pickup" ? "id_pickup_location" : "id_dropoff_location");
+
+            if (latInput) latInput.value = "";
+            if (lngInput) lngInput.value = "";
+            if (addressElement) addressElement.textContent = `Select ${type} location...`;
+            if (formField) formField.value = "";
+        });
+
+        const distanceElement = document.getElementById("distance");
+        const durationElement = document.getElementById("duration");
+        const distanceField = document.getElementById("distance_km");
+        const budgetField = document.getElementById("id_budget");
+        const priceInfoElements = document.querySelectorAll("small.text-gray-500");
+
+        if (distanceElement) distanceElement.textContent = "";
+        if (durationElement) durationElement.textContent = "";
+        if (distanceField) distanceField.value = "";
+        if (budgetField) budgetField.value = "";
+        if (priceInfoElements.length > 0) {
+            priceInfoElements[0].textContent = "Estimated Ride Price:";
+        }
+    }
+
+    function setupFormFieldsToMap() {
+        const pickupField = document.getElementById("id_pickup_location");
+        const dropoffField = document.getElementById("id_dropoff_location");
+
+        if (!pickupField || !dropoffField || !google?.maps?.places || !map) {
+            console.error("Required elements or Google Maps API not available");
+            return;
+        }
+
+        // Define bounds for Eswatini (optional geographic restriction)
+        const eswatiniBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(-27.3174, 30.9909), // Southwest
+            new google.maps.LatLng(-25.7196, 32.1373)  // Northeast
+        );
+
+        // Setup Google Places PlaceAutocompleteElement for pickup field
+        const pickupAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+            inputElement: pickupField,
+            requestFields: ["geometry", "name", "formatted_address"],
+            types: ["geocode"], // Restrict to geocodable addresses
+            locationRestriction: eswatiniBounds // Restrict to Eswatini (optional)
+        });
+
+        pickupAutocomplete.addEventListener("place_changed", () => {
+            const place = pickupAutocomplete.getPlace();
+            if (!place.geometry || !place.geometry.location) {
+                console.warn("No valid geometry for pickup location");
+                return;
+            }
+
+            if (pickupMarker) {
+                pickupMarker.map = null;
+            }
+
+            pickupMarker = addMarker("pickup", place.geometry.location);
+            map.setCenter(place.geometry.location);
+
+            // Update address directly from PlaceAutocomplete
+            const addressElement = document.getElementById("pickup-address");
+            const formField = document.getElementById("id_pickup_location");
+            const address = place.formatted_address || "Address not found";
+            if (addressElement) {
+                addressElement.textContent = address;
+            }
+            if (formField) {
+                formField.value = address;
+            }
+
+            updateRouteIfPossible();
+        });
+
+        // Setup Google Places PlaceAutocompleteElement for dropoff field
+        const dropoffAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+            inputElement: dropoffField,
+            requestFields: ["geometry", "name", "formatted_address"],
+            types: ["geocode"], // Restrict to geocodable addresses
+            locationRestriction: eswatiniBounds // Restrict to Eswatini (optional)
+        });
+
+        dropoffAutocomplete.addEventListener("place_changed", () => {
+            const place = dropoffAutocomplete.getPlace();
+            if (!place.geometry || !place.geometry.location) {
+                console.warn("No valid geometry for dropoff location");
+                return;
+            }
+
+            if (dropoffMarker) {
+                dropoffMarker.map = null;
+            }
+
+            dropoffMarker = addMarker("dropoff", place.geometry.location);
+            map.setCenter(place.geometry.location);
+
+            // Update address directly from PlaceAutocomplete
+            const addressElement = document.getElementById("dropoff-address");
+            const formField = document.getElementById("id_dropoff_location");
+            const address = place.formatted_address || "Address not found";
+            if (addressElement) {
+                addressElement.textContent = address;
+            }
+            if (formField) {
+                formField.value = address;
+            }
+
+            updateRouteIfPossible();
+        });
+    }
+
+    // Ensure Google Maps API is loaded before initializing
+    if (typeof google === "undefined") {
+        console.warn("Google Maps API not loaded. Waiting for script to load...");
+        window.addEventListener("load", () => {
+            if (!google) {
+                console.error("Google Maps API failed to load. Check API key, referrer settings, and network.");
+            } else {
+                google.maps.importLibrary("maps").then(() => {
+                    initMap();
+                    const resetButton = document.querySelector(".btn-primary");
+                    if (resetButton) {
+                        resetButton.addEventListener("click", resetMap);
+                    }
+                }).catch(error => {
+                    console.error("Failed to import Maps library:", error);
+                });
+            }
+        });
+    } else {
+        google.maps.importLibrary("maps").then(() => {
+            initMap();
+            const resetButton = document.querySelector(".btn-primary");
+            if (resetButton) {
+                resetButton.addEventListener("click", () => {
+                    resetMap();
+                });
+            };
+        }).catch(error => {
+            console.error("Failed to import Maps library:", error);
+        });
+    }
+</script>
+</script>
+
+{% endblock %}

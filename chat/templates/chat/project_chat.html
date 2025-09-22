@@ -1,0 +1,295 @@
+{% extends "core/base.html" %}
+{% block title %}Chat - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="row">
+        <!-- Left Sidebar -->
+        <div class="col-md-3">
+            <div class="project-info-card shadow p-3 mb-3">
+                <h5 class="mb-3">{{ project.title }}</h5>
+                <div class="project-meta">
+                    <p><i class="fas fa-user"></i> Client: {{ project.client.username }}</p>
+                    {% if project.freelancer %}
+                        <p><i class="fas fa-code"></i> Freelancer: {{ project.freelancer.username }}</p>
+                    {% endif %}
+                    <p><i class="fas fa-money-bill"></i> Budget: ${{ project.budget }}</p>
+                    <p><i class="fas fa-calendar"></i> Deadline: {{ project.deadline|date }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Area -->
+        
+        <div class="col-md-9">
+            <div class="chat-container mb-5">
+            <div class="chat-box shadow">
+                <!-- Messages Area -->
+                <div class="chat-messages" id="chatMessages">
+                    {% for message in messages %}
+                        <div class="message {% if message.sender == request.user %}message-sent{% else %}message-received{% endif %}"
+                             data-message-id="{{ message.id }}">
+                            <div class="message-content">
+                                {% if message.is_deleted %}
+                                    <p class="text-muted"><i>This message has been deleted</i></p>
+                                {% else %}
+                                    <div class="message-text">{{ message.content }}</div>
+                                    
+                                    <!-- File Attachments -->
+                                    {% if message.files.all %}
+                                        <div class="message-attachments">
+                                            {% for file in message.files.all %}
+                                                <div class="attachment">
+                                                    <a href="{{ file.file.url }}" target="_blank">
+                                                        <i class="fas fa-paperclip"></i>
+                                                        {{ file.file_name }}
+                                                        <span class="file-size">({{ file.file_size|filesizeformat }})</span>
+                                                    </a>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Message Meta -->
+                                    <div class="message-meta">
+                                        <span class="message-time">{{ message.timestamp|date:"g:i A" }}</span>
+                                        <span class="message-sender">{{ message.sender.username }}</span>
+                                        {% if message.edited %}
+                                            <span class="message-edited">(edited)</span>
+                                        {% endif %}
+                                        
+                                        <!-- Message Actions -->
+                                        {% if message.sender == request.user %}
+                                            <div class="message-actions">
+                                                <button class="btn btn-sm edit-message" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm delete-message" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <!-- Read Receipts -->
+                                        <div class="read-receipts">
+                                            {% if message.read_by.all %}
+                                                <span class="read-by" title="Read by: {% for user in message.read_by.all %}{{ user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                                                    <i class="fas fa-check-double"></i>
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" style="display: none;">
+                    <span class="typing-text"></span>
+                </div>
+                
+                <!-- Message Input Area -->
+                <form id="chatForm" class="chat-input-form">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <!-- File Upload -->
+                        <div class="input-group-prepend">
+                            <label for="fileInput" class="btn btn-outline-secondary" title="Attach files">
+                                <i class="fas fa-paperclip"></i>
+                                <input type="file" id="fileInput" multiple style="display: none;">
+                            </label>
+                        </div>
+                        
+                        <!-- Text Input -->
+                        <input type="text" id="messageInput" class="form-control" placeholder="Type your message...">
+                        
+                        <!-- Send Button -->
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- File Preview Area -->
+                    <div id="filePreview" class="file-preview-area"></div>
+                </form>
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const fileInput = document.getElementById('fileInput');
+        const filePreview = document.getElementById('filePreview');
+        const typingIndicator = document.querySelector('.typing-indicator');
+        let typingTimeout;
+        
+        // WebSocket Connection
+        const ws = new WebSocket(
+            `ws://${window.location.host}/ws/chat/${PROJECT_ID}/`
+        );
+        
+        ws.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_message') {
+                appendMessage(data.message);
+            } else if (data.type === 'typing_status') {
+                showTypingIndicator(data.user);
+            }
+        };
+        
+        // Scroll to bottom
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        scrollToBottom();
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function() {
+            filePreview.innerHTML = '';
+            Array.from(this.files).forEach(file => {
+                const preview = document.createElement('div');
+                preview.className = 'file-preview';
+                preview.innerHTML = `
+                    <i class="fas fa-file"></i>
+                    ${file.name}
+                    <small>(${formatFileSize(file.size)})</small>
+                `;
+                filePreview.appendChild(preview);
+            });
+        });
+        
+        // Handle form submission
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const content = messageInput.value.trim();
+            if (!content && fileInput.files.length === 0) return;
+            
+            const formData = new FormData();
+            formData.append('action', 'send_message');
+            formData.append('content', content);
+            Array.from(fileInput.files).forEach(file => {
+                formData.append('files', file);
+            });
+            
+            fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    messageInput.value = '';
+                    fileInput.value = '';
+                    filePreview.innerHTML = '';
+                }
+            });
+        });
+        
+        // Handle typing indicator
+        messageInput.addEventListener('input', function() {
+            clearTimeout(typingTimeout);
+            ws.send(JSON.stringify({type: 'typing'}));
+            
+            typingTimeout = setTimeout(() => {
+                ws.send(JSON.stringify({type: 'stop_typing'}));
+            }, 3000);
+        });
+        
+        // Edit message
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-message')) {
+                const messageDiv = e.target.closest('.message');
+                const messageText = messageDiv.querySelector('.message-text');
+                const originalText = messageText.textContent;
+                
+                messageText.innerHTML = `
+                    <input type="text" class="edit-input form-control" value="${originalText}">
+                    <div class="edit-actions mt-2">
+                        <button class="btn btn-sm btn-success save-edit">Save</button>
+                        <button class="btn btn-sm btn-secondary cancel-edit">Cancel</button>
+                    </div>
+                `;
+            }
+        });
+        
+        // Delete message
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.delete-message')) {
+                if (confirm('Are you sure you want to delete this message?')) {
+                    const messageDiv = e.target.closest('.message');
+                    const messageId = messageDiv.dataset.messageId;
+                    
+                    fetch('', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: `action=delete_message&message_id=${messageId}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            messageDiv.querySelector('.message-text').innerHTML = 
+                                '<i class="text-muted">This message has been deleted</i>';
+                        }
+                    });
+                }
+            }
+        });
+        
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function showTypingIndicator(username) {
+            typingIndicator.style.display = 'block';
+            typingIndicator.querySelector('.typing-text').textContent = `${username} is typing...`;
+            
+            setTimeout(() => {
+                typingIndicator.style.display = 'none';
+            }, 3000);
+        }
+        
+        function appendMessage(message) {
+            // Create and append new message HTML
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.sender === CURRENT_USER ? 'message-sent' : 'message-received'}`;
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-text">${message.content}</div>
+                    <!-- Add file attachments if any -->
+                    <div class="message-meta">
+                        <span class="message-time">${formatTime(message.timestamp)}</span>
+                        <span class="message-sender">${message.sender}</span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+        
+        function formatTime(timestamp) {
+            return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    });
+</script>
+{% endblock %}

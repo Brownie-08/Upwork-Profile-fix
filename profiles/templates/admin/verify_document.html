@@ -1,0 +1,12 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Verify Document</h1>
+<p><strong>User:</strong> {{ document.profile.user.username }}</p>
+<p><strong>Document Type:</strong> {{ document.get_document_type_display }}</p>
+<p><strong>Uploaded At:</strong> {{ document.uploaded_at }}</p>
+<p><strong>File:</strong> <a href="{{ document.document.url }}">Download</a></p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Verify</button>
+</form>
+{% endblock %}

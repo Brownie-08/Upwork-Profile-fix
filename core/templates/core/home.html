@@ -1,0 +1,123 @@
+{% extends "core/base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="jobs-container">
+    <!-- Filter Sidebar -->
+    <div class="filters-section">
+        <div class="filters-header">
+            <h3>Filter Jobs</h3>
+            <div class="filters-icon">
+                <i class="fas fa-sliders-h"></i>
+            </div>
+        </div>
+        <form method="get" action="{% url 'home' %}" class="filters-form">
+            <div class="filter-group">
+                <label for="service_type">Service Type</label>
+                <select id="service_type" name="service_type" class="filter-select">
+                    <option value="">Select Service Type</option>
+                    {% for choice, label in service_type_choices %}
+                        <option value="{{ choice }}" {% if selected_service_type == choice %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="budget">Budget</label>
+                <input type="number" id="budget" name="budget" 
+                       value="{{ selected_budget }}" placeholder="Enter Max Budget">
+            </div>
+            
+            <div class="filter-group">
+                <label for="status">Status</label>
+                <select id="status" name="status" class="filter-select">
+                    <option value="">Select Status</option>
+                    {% for choice, label in projects.model.STATUS_CHOICES %}
+                        <option value="{{ choice }}" {% if selected_status == choice %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="filter-button">
+                <i class="fas fa-search"></i> Apply Filters
+            </button>
+        </form>
+    </div>
+
+    <!-- Main Content -->
+    <div class="jobs-content">
+        <div class="jobs-header">
+            <h1>Available Jobs</h1>
+            <div class="jobs-count">{{ projects.count }} jobs found</div>
+        </div>
+
+        <div class="jobs-list">
+            {% for project in projects %}
+                <div class="job-item">
+                    <div class="job-main-info">
+                        <h3 class="job-title">{{ project.title }}</h3>
+                        <div class="job-meta">
+                            <span class="job-budget">
+                                <i class="fas fa-coins"></i> E {{ project.budget }}
+                            </span>
+                            <span class="job-time">
+                                <i class="far fa-clock"></i> {{ project.created_at|timesince }} ago
+                            </span>
+                            <span class="job-deadline">
+                                <i class="far fa-calendar-alt"></i> Due: {{ project.deadline }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="job-description">
+                        {{ project.description|truncatewords:30 }}
+                    </div>
+                    
+                    <div class="job-action">
+                        <a href="{% url 'project-detail' project.pk %}" class="view-job-btn">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="no-jobs">
+                    <i class="fas fa-briefcase"></i>
+                    <p>No jobs available at the moment.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if is_paginated %}
+            <div class="pagination-container">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                        <li><a href="?page=1" class="page-nav">First</a></li>
+                        <li><a href="?page={{ page_obj.previous_page_number }}" class="page-nav">
+                            <i class="fas fa-chevron-left"></i>
+                        </a></li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li><span class="page-num active">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li><a href="?page={{ num }}" class="page-num">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li><a href="?page={{ page_obj.next_page_number }}" class="page-nav">
+                            <i class="fas fa-chevron-right"></i>
+                        </a></li>
+                        <li><a href="?page={{ page_obj.paginator.num_pages }}" class="page-nav">Last</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

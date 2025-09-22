@@ -1,0 +1,81 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Project Completion - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="card-title mb-0">Project Completion</h2>
+        </div>
+        <div class="card-body">
+            <!-- Project Details -->
+            <div class="mb-4">
+                <h3>{{ project.title }}</h3>
+                <p class="text-muted">Budget: E {{ project.budget }}</p>
+            </div>
+
+            <!-- Status Information -->
+            <div class="alert {% if project.is_completed %}alert-success{% else %}alert-info{% endif %} mb-4">
+                <h4 class="alert-heading">Status</h4>
+                <ul class="list-unstyled mb-0">
+                    <li>
+                        <i class="fas {% if project.client_confirmed %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %} me-2"></i>
+                        Client Confirmation: {{ project.client.username }}
+                    </li>
+                    <li>
+                        <i class="fas {% if project.freelancer_confirmed %}fa-check-circle text-success{% else %}fa-circle text-muted{% endif %} me-2"></i>
+                        Freelancer Confirmation: {{ project.freelancer.username }}
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Completion Form -->
+            {% if not project.is_completed %}
+                {% if is_client and not project.client_confirmed or is_freelancer and not project.freelancer_confirmed %}
+                    <form method="post" class="mb-4">
+                        {% csrf_token %}
+                        <div class="alert alert-warning">
+                            <p class="mb-3">
+                                {% if is_client %}
+                                    By confirming completion, you acknowledge that the project meets your requirements 
+                                    and authorize the release of funds to the freelancer.
+                                {% else %}
+                                    By confirming completion, you confirm that you have completed all project requirements 
+                                    and are ready to receive payment.
+                                {% endif %}
+                            </p>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            Confirm Project Completion
+                        </button>
+                    </form>
+                {% endif %}
+
+                {% if awaiting_other %}
+                    <div class="alert alert-info">
+                        Waiting for the other party to confirm project completion.
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Navigation -->
+            <div class="mt-4">
+                <a href="{% url 'project-detail' project.pk %}" class="btn btn-outline-primary">
+                    Back to Project Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

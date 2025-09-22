@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block title %}Logged Out{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-6 mx-auto job_container">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">You have been logged out</h2>
+                    <p class="card-text">Thank you for using LusitoHub!</p>
+                    <a href="{% url 'login' %}" class="btn btn-primary">Sign In Again</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %} 

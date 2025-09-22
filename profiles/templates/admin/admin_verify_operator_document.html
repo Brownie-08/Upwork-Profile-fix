@@ -1,0 +1,21 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Verify {{ label }} for {{ operator_doc.user.username }} (Vehicle: {{ operator_doc.vehicle }})</h1>
+{% if operator_doc.drivers_license %}
+<p><a href="{{ operator_doc.drivers_license.url }}" target="_blank">View Document</a></p>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="approve">
+    <button type="submit" class="btn btn-success">Approve</button>
+</form>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="reject">
+    <textarea name="rejection_reason" placeholder="Rejection reason"></textarea>
+    <button type="submit" class="btn btn-danger">Reject</button>
+</form>
+{% if operator_doc.drivers_license_rejection_reason %}
+<p>Rejection Reason: {{ operator_doc.drivers_license_rejection_reason }}</p>
+{% endif %}
+{% else %}
+<p>No document uploaded
