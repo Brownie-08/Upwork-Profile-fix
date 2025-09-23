@@ -16,16 +16,16 @@ You need to set these environment variables in your Railway project dashboard:
 
 2. **Google Maps API Keys**
    ```
-   Client_API_KEY=AIzaSyDGcTDai2bvoTT1OYqasDO63BotbnE6eIc
-   Server-Side_API_KEY=AIzaSyDGcTDai2bvoTT1OYqasDO63BotbnE6eIc
+   Client_API_KEY=your-google-maps-client-api-key-here
+   Server-Side_API_KEY=your-google-maps-server-api-key-here
    ```
 
 3. **MTN Mobile Money Configuration**
    ```
    MOMO_BASE_URL=https://sandbox.momodeveloper.mtn.com
-   MOMO_SUBSCRIPTION_KEY=43b433c16c694726819a42a1ad8a6f4b
-   MOMO_API_USER_ID=dbec4133-4cda-4081-98bb-f9ea753b609f
-   MOMO_API_KEY=71e6f6449bf8406da440cdf583d33d59
+   MOMO_SUBSCRIPTION_KEY=your-momo-subscription-key-here
+   MOMO_API_USER_ID=your-momo-api-user-id-here
+   MOMO_API_KEY=your-momo-api-key-here
    MOMO_CALLBACK_URL=https://your-app-name.railway.app/momo/callback/
    MOMO_PROVIDER_CALLBACK_HOST=https://your-app-name.railway.app
    MOMO_ENVIRONMENT=sandbox
@@ -38,9 +38,9 @@ You need to set these environment variables in your Railway project dashboard:
    EMAIL_HOST=smtp.gmail.com
    EMAIL_PORT=587
    EMAIL_USE_TLS=True
-   EMAIL_HOST_USER=ncabamatse@gmail.com
-   EMAIL_HOST_PASSWORD=sdcijeyzjnvirlgo
-   DEFAULT_FROM_EMAIL=ncabamatse@gmail.com
+   EMAIL_HOST_USER=your-gmail-address@gmail.com
+   EMAIL_HOST_PASSWORD=your-gmail-app-password-here
+   DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
    ```
 
 ### Database Configuration

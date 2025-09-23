@@ -14,7 +14,7 @@ The error shows that Resend API is connecting successfully, but it doesn't allow
 4. Find `DEFAULT_FROM_EMAIL`
 5. Change it from:
    ```
-   DEFAULT_FROM_EMAIL=udohpeterbrown@gmail.com
+   DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
    ```
    To:
    ```
@@ -48,7 +48,7 @@ The code I just updated will automatically:
 ## 🎯 **Expected User Experience:**
 
 1. User registers with email `simplythehub@gmail.com`
-2. Resend tries to send from `udohpeterbrown@gmail.com` (fails)  
+2. Resend tries to send from your Gmail address (fails)
 3. Resend automatically retries from `onboarding@resend.dev` (succeeds)
 4. User receives OTP email in their inbox
 5. User can complete registration successfully

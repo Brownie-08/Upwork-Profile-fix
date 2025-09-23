@@ -109,8 +109,8 @@ RESEND_API_KEY=re_your_resend_api_key
 DEFAULT_FROM_EMAIL=noreply@lusitohub.com
 
 # Keep your Gmail settings as backup:
-EMAIL_HOST_USER=udohpeterbrown@gmail.com
-EMAIL_HOST_PASSWORD=fdachcuqlibcctsb
+EMAIL_HOST_USER=your-gmail-address@gmail.com
+EMAIL_HOST_PASSWORD=your-gmail-app-password-here
 ```
 
 ## 🚀 **Deployment Steps**

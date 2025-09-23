@@ -9,9 +9,9 @@ I've updated the system to **force real email delivery** in production. No more 
 **Go to Railway Dashboard → Your Service → Variables** and add these **EXACT** variables:
 
 ```bash
-EMAIL_HOST_USER=ncabamatse@gmail.com
-EMAIL_HOST_PASSWORD=sdcijeyzjnvirlgo
-DEFAULT_FROM_EMAIL=ncabamatse@gmail.com
+EMAIL_HOST_USER=your-gmail-address@gmail.com
+EMAIL_HOST_PASSWORD=your-gmail-app-password-here
+DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
 ```
 
 ## ⚠️ **SECURITY ALERT: Your Gmail Credentials are Exposed!**
@@ -27,9 +27,9 @@ Your email credentials were visible in our previous conversation. **You MUST:**
 
 2. **Update Railway with NEW credentials**:
    ```bash
-   EMAIL_HOST_USER=ncabamatse@gmail.com
+   EMAIL_HOST_USER=your-gmail-address@gmail.com
    EMAIL_HOST_PASSWORD=your-new-16-character-app-password
-   DEFAULT_FROM_EMAIL=ncabamatse@gmail.com
+   DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
    ```
 
 ## 🎯 **What Changed - No More Console Fallback**
@@ -83,7 +83,7 @@ After deployment:
 
 1. **Check Railway logs** for:
    ```
-   📧 Production SMTP configured: ncabamatse@gmail.com
+   📧 Production SMTP configured: your-gmail-address@gmail.com
    ✅ Users will receive OTP codes via email
    ```
 

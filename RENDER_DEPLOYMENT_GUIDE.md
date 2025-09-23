@@ -50,11 +50,11 @@ DATABASE_URL=postgresql://username:password@host:port/database
 ```
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_HOST_USER=udohpeterbrown@gmail.com
-EMAIL_HOST_PASSWORD=fdac hcuq libc ctsb
+EMAIL_HOST_USER=your-gmail-address@gmail.com
+EMAIL_HOST_PASSWORD=your-gmail-app-password-here
 EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
-DEFAULT_FROM_EMAIL=udohpeterbrown@gmail.com
+DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
 EMAIL_TIMEOUT=30
 ```
 
@@ -101,7 +101,7 @@ Render will automatically run `./build.sh` which:
 
 After deployment, check the logs to ensure Gmail SMTP is working:
 - Look for: `"📧 Production Gmail SMTP configured"`
-- Verify: `"✅ Gmail SMTP configured for udohpeterbrown@gmail.com"`
+- Verify: `"✅ Gmail SMTP configured for your-gmail-address@gmail.com"`
 
 ## 🎯 Post-Deployment Checklist
 

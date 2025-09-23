@@ -24,9 +24,9 @@ EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
-EMAIL_HOST_USER=udohpeterbrown@gmail.com
-EMAIL_HOST_PASSWORD=fdac hcuq libc ctsb
-DEFAULT_FROM_EMAIL=udohpeterbrown@gmail.com
+EMAIL_HOST_USER=your-gmail-address@gmail.com
+EMAIL_HOST_PASSWORD=your-gmail-app-password-here
+DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
 ```
 
 ⚠️ **IMPORTANT:** The `EMAIL_HOST_PASSWORD` above is your Gmail App Password (16 characters), NOT your regular Gmail password.
@@ -77,7 +77,7 @@ After configuring the variables:
 
 ### **If emails still don't work:**
 1. **Check Railway logs** for SMTP connection errors
-2. **Verify Gmail App Password** is exactly: `fdac hcuq libc ctsb`
+2. **Verify Gmail App Password** matches your generated 16-character password
 3. **Confirm 2FA is enabled** on Gmail account
 4. **Try regenerating** the Gmail App Password if needed
 

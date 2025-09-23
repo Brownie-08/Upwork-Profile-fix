@@ -16,11 +16,11 @@ This guide helps you configure all the necessary environment variables for Lusit
 
 ### 1. Gmail Configuration (Email Sending)
 
-**Current Email**: `ncabamatse@gmail.com`
+**Current Email**: `your-gmail-address@gmail.com`
 
 #### Step 1: Enable 2-Factor Authentication
 1. Go to https://myaccount.google.com/security
-2. Sign in with `ncabamatse@gmail.com`
+2. Sign in with your Gmail address
 3. Click "2-Step Verification" and follow setup
 
 #### Step 2: Generate App Password
@@ -32,10 +32,10 @@ This guide helps you configure all the necessary environment variables for Lusit
 #### Step 3: Update .env file
 ```env
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-DEFAULT_FROM_EMAIL=ncabamatse@gmail.com
+DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_HOST_USER=ncabamatse@gmail.com
+EMAIL_HOST_USER=your-gmail-address@gmail.com
 EMAIL_HOST_PASSWORD=your-16-char-app-password-here
 EMAIL_USE_TLS=True
 ```
@@ -122,7 +122,7 @@ from django.core.mail import send_mail
 send_mail(
     'Test Email',
     'This is a test email from LusitoHub.',
-    'ncabamatse@gmail.com',
+    'your-gmail-address@gmail.com',
     ['test@example.com'],
     fail_silently=False,
 )

@@ -23,18 +23,18 @@ Copy and paste these exact values into your Render service environment:
 | `RENDER_EXTERNAL_HOSTNAME` | `upwork-profile-fix.onrender.com` |
 | `EMAIL_HOST` | `smtp.gmail.com` |
 | `EMAIL_PORT` | `587` |
-| `EMAIL_HOST_USER` | `udohpeterbrown@gmail.com` |
-| `EMAIL_HOST_PASSWORD` | `fdachcuqlibcctsb` |
+| `EMAIL_HOST_USER` | `your-gmail-address@gmail.com` |
+| `EMAIL_HOST_PASSWORD` | `your-gmail-app-password-here` |
 | `EMAIL_USE_TLS` | `True` |
 | `EMAIL_USE_SSL` | `False` |
-| `DEFAULT_FROM_EMAIL` | `udohpeterbrown@gmail.com` |
+| `DEFAULT_FROM_EMAIL` | `your-gmail-address@gmail.com` |
 | `EMAIL_TIMEOUT` | `30` |
-| `Client_API_KEY` | `AIzaSyDGcTDai2bvoTT1OYqasDO63BotbnE6eIc` |
-| `Server-Side_API_KEY` | `AIzaSyDGcTDai2bvoTT1OYqasDO63BotbnE6eIc` |
+| `Client_API_KEY` | `your-google-maps-client-api-key-here` |
+| `Server-Side_API_KEY` | `your-google-maps-server-api-key-here` |
 | `MOMO_BASE_URL` | `https://sandbox.momodeveloper.mtn.com` |
-| `MOMO_SUBSCRIPTION_KEY` | `43b433c16c694726819a42a1ad8a6f4b` |
-| `MOMO_API_USER_ID` | `dbec4133-4cda-4081-98bb-f9ea753b609f` |
-| `MOMO_API_KEY` | `71e6f6449bf8406da440cdf583d33d59` |
+| `MOMO_SUBSCRIPTION_KEY` | `your-momo-subscription-key-here` |
+| `MOMO_API_USER_ID` | `your-momo-api-user-id-here` |
+| `MOMO_API_KEY` | `your-momo-api-key-here` |
 | `MOMO_ENVIRONMENT` | `sandbox` |
 | `MOMO_CURRENCY` | `SZL` |
 | `MOMO_CALLBACK_URL` | `https://upwork-profile-fix.onrender.com/momo/callback/` |
@@ -49,9 +49,9 @@ Copy and paste these exact values into your Render service environment:
 
 | Variable Name | Value |
 |---------------|--------|
-| `CLOUDINARY_CLOUD_NAME` | `de9i7id2b` |
-| `CLOUDINARY_API_KEY` | `547248818221456` |
-| `CLOUDINARY_API_SECRET` | `611drBROvgh5Bkip4HZYaLRoddI` |
+| `CLOUDINARY_CLOUD_NAME` | `your-cloudinary-cloud-name-here` |
+| `CLOUDINARY_API_KEY` | `your-cloudinary-api-key-here` |
+| `CLOUDINARY_API_SECRET` | `your-cloudinary-api-secret-here` |
 
 ## 🔧 **How CSRF Will Now Work**
 
