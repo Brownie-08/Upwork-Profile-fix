@@ -55,14 +55,14 @@ def create_env_file():
     email_backend = input("Email backend (1=Console, 2=SMTP) [1]: ").strip() or "1"
     if email_backend == "2":
         email_backend = "django.core.mail.backends.smtp.EmailBackend"
-        email_user = input("Gmail address [ncabamatse@gmail.com]: ").strip() or "ncabamatse@gmail.com"
+        email_user = input("Gmail address [your-email@gmail.com]: ").strip() or "your-email@gmail.com"
         print("📝 To get Gmail app password:")
         print("   1. Go to https://myaccount.google.com/apppasswords")
         print("   2. Generate app password for 'LusitoHub Django App'")
         email_password = input("Gmail app password (16 characters): ").strip()
     else:
         email_backend = "django.core.mail.backends.console.EmailBackend"
-        email_user = "ncabamatse@gmail.com"
+        email_user = "your-email@gmail.com"
         email_password = ""
     
     # Google Maps

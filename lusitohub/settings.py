@@ -373,9 +373,9 @@ if is_production:
         print("Users will NOT receive OTP codes - registration will fail!")
         print("")
         print("📧 Required Gmail SMTP variables for Render:")
-        print("- EMAIL_HOST_USER=udohpeterbrown@gmail.com")
-        print("- EMAIL_HOST_PASSWORD=fdac hcuq libc ctsb")
-        print("- DEFAULT_FROM_EMAIL=udohpeterbrown@gmail.com")
+        print("- EMAIL_HOST_USER=your-gmail-address@gmail.com")
+        print("- EMAIL_HOST_PASSWORD=your-gmail-app-password-here")
+        print("- DEFAULT_FROM_EMAIL=your-gmail-address@gmail.com")
         print(f"🔍 Environment check: RENDER={('RENDER' in os.environ)}")
         # Use console as fallback to prevent total failure
         EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

@@ -48,9 +48,9 @@ else:
 **Add these to your Render service:**
 
 ```bash
-CLOUDINARY_CLOUD_NAME=de9i7id2b
-CLOUDINARY_API_KEY=547248818221456
-CLOUDINARY_API_SECRET=611drBROvgh5Bkip4HZYaLRoddI
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name-here
+CLOUDINARY_API_KEY=your-cloudinary-api-key-here
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret-here
 ```
 
 ## 📋 How It Works Now
