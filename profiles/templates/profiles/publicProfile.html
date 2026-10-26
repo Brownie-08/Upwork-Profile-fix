@@ -16,7 +16,7 @@
             <h4 class="text-muted">{{ profile.title }}</h4>
             
             {% if is_own_profile %}
-            <a href="{% url 'edit-profile' %}" class="btn btn-primary mb-3">
+            <a href="{% url 'profiles:edit_profile' %}" class="btn btn-primary mb-3">
                 <i class="fas fa-edit"></i> Edit Profile
             </a>
             {% endif %}
